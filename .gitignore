@@ -1,0 +1,6 @@
+tools/venv/
+launcher/app/build/
+launcher/.gradle/
+tools/adbkey/
+*.apk
+.DS_Store

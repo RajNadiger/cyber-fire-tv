@@ -1,0 +1,30 @@
+# Fire TV Stick. Disable, never uninstall. Undo with tools/restore.sh debloat/firetv.txt
+# Telemetry, ads, and shopping. Live TV, the Amazon launcher, Alexa, casting,
+# the Appstore, and firmware updates are not in this list.
+com.amazon.client.metrics.api
+com.amazon.tv.fw.metrics
+com.amazon.wirelessmetrics.service
+com.amazon.perfcollection
+com.amazon.perfc
+com.amazon.dp.logger
+com.amazon.ceviche
+com.amazon.tv.developer.dataservice
+com.amazon.livedeviceservice
+com.amazon.privacypassservice
+com.amazon.wifilocker
+com.amazon.tv.acr
+com.amazon.kso.blackbird
+com.amazon.sneakpeek
+com.amazon.hybridadidservice
+com.amazon.providers.contentsupport
+com.amazon.shoptv.client
+com.amazon.shoptv.firetv.client
+com.amazon.hedwig
+com.amazon.franktvinput
+com.amazon.gamehub
+com.amazon.systemnotices
+com.amazon.tv.releasenotes
+com.amazon.uxnotification
+com.amazon.tahoe
+com.amazon.bueller.music
+com.amazon.tmm.tutorial

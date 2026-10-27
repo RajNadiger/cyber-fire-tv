@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF101014"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingStart="80dp"
+    android:paddingEnd="80dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/restore_title"
+        android:textColor="#FFFFFFFF"
+        android:textSize="36sp"
+        android:fontFamily="@string/font_medium" />
+
+    <TextView
+        android:id="@+id/restoreBody"
+        android:layout_width="520dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/restore_body"
+        android:textColor="#C7EBEBF5"
+        android:textSize="18sp"
+        android:lineSpacingExtra="4dp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/restoreGo"
+            style="@style/SettingsRow"
+            android:layout_width="220dp"
+            android:layout_height="52dp"
+            android:gravity="center"
+            android:text="@string/restore_go" />
+
+        <TextView
+            android:id="@+id/restoreCancel"
+            style="@style/SettingsRow"
+            android:layout_width="220dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="16dp"
+            android:gravity="center"
+            android:text="@string/restore_cancel" />
+    </LinearLayout>
+</LinearLayout>
