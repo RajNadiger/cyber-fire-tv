@@ -1,6 +1,7 @@
 tools/venv/
 launcher/app/build/
 launcher/.gradle/
+launcher/local.properties
 tools/adbkey/
 *.apk
 .DS_Store
