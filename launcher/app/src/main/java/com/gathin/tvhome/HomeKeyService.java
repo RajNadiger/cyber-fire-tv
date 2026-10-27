@@ -199,7 +199,7 @@ public class HomeKeyService extends AccessibilityService {
         boolean watchFront = !frontAppKeys.isEmpty() || !frontAppScancodes.isEmpty();
         stockHome.clear();
         stockHomePackage = config.stockHomeRedirect;
-        if (!config.stockHomeRedirect.isEmpty()) {
+        if (!stockHomePackage.isEmpty()) {
             Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(config.stockHomeRedirect);
             for (ResolveInfo ri : getPackageManager().queryIntentActivities(home, PackageManager.MATCH_DISABLED_COMPONENTS)) {
                 stockHome.add(ri.activityInfo.name);
@@ -281,10 +281,12 @@ public class HomeKeyService extends AccessibilityService {
             if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openHome();
             return true;
         }
-        if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && !stockHome.isEmpty()) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_HOME) {
+            // Leave Amazon's home. Return false so Fire OS still refreshes its own home; the retries
+            // below pull Cyber forward after Fire OS stops blocking new activities.
             visitStockHome = false;
             if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openHome();
-            return true;
+            return false;
         }
         if (event.getKeyCode() != KeyEvent.KEYCODE_ALL_APPS) return false;
         if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openHome();
@@ -301,6 +303,12 @@ public class HomeKeyService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
+        CharSequence pkgName = event.getPackageName();
+        // Cyber is up: stop the retries so they don't pull the person out of an app.
+        if (pkgName != null && getPackageName().contentEquals(pkgName)) {
+            bringToken++;
+            return;
+        }
         // app_keys "front:" entries: only activities count, so a toast or the volume bar doesn't change the app in front.
         if ((!frontAppKeys.isEmpty() || !frontAppScancodes.isEmpty())
                 && event.getPackageName() != null && event.getClassName() != null) {
@@ -317,16 +325,17 @@ public class HomeKeyService extends AccessibilityService {
             openHome();
             return;
         }
-        // stock_home_redirect: the firmware turned the stock launcher back on and its home screen came up.
-        // A visit from the Fire TV home button is allowed to stay until the remote Home key.
-        if (visitStockHome) return;
+        // The Fire TV home button may stay for a few seconds. A later Home press brings Amazon's
+        // screen up again, and that window is the signal to return to Cyber.
         CharSequence pkg = event.getPackageName();
-        if (!stockHomePackage.isEmpty() && pkg != null && stockHomePackage.contentEquals(pkg)) {
-            openHome();
-            return;
-        }
+        boolean amazon = !stockHomePackage.isEmpty() && pkg != null && stockHomePackage.contentEquals(pkg);
         CharSequence cls = event.getClassName();
-        if (!stockHome.isEmpty() && cls != null && stockHome.contains(cls.toString())) openHome();
+        boolean amazonHome = cls != null && stockHome.contains(cls.toString());
+        if (amazon || amazonHome) {
+            if (visitStockHome && SystemClock.elapsedRealtime() < allowStockUntil) return;
+            visitStockHome = false;
+            openHome();
+        }
     }
 
     /** How long power_on_home stays armed after the screen turns on without a reboot. */
@@ -361,11 +370,13 @@ public class HomeKeyService extends AccessibilityService {
         return now < armedUntil;
     }
 
-    /** True while the person opened the stock home on purpose. The remote Home key clears it. */
+    /** True while the person opened the stock home on purpose. A short window lets that screen appear. */
     private static volatile boolean visitStockHome;
+    private static volatile long allowStockUntil;
 
     static void visitStockHome() {
         visitStockHome = true;
+        allowStockUntil = SystemClock.elapsedRealtime() + 3000;
     }
 
     static void leaveStockHome() {
@@ -430,17 +441,18 @@ public class HomeKeyService extends AccessibilityService {
         return upTime - downTime < longPressTimeout;
     }
 
-    private long lastOpenHome;
+    private int bringToken;
 
     private void openHome() {
-        long now = SystemClock.elapsedRealtime();
-        if (now - lastOpenHome < 8000) return;
-        lastOpenHome = now;
+        final int token = ++bringToken;
         openHomeNow();
-        // Fire OS refuses a new activity for several seconds after Home. Try again when that block lifts.
-        handler.postDelayed(this::openHomeNow, 1800);
-        handler.postDelayed(this::openHomeNow, 4500);
-        handler.postDelayed(this::openHomeNow, 6500);
+        // Fire OS blocks a new screen for several seconds after Home, then often puts Amazon back.
+        // Keep opening Cyber until its own window is in front.
+        for (int delay : new int[]{700, 1500, 2500, 4000, 5500, 7000, 9000}) {
+            handler.postDelayed(() -> {
+                if (token == bringToken) openHomeNow();
+            }, delay);
+        }
     }
 
     private void openHomeNow() {

@@ -79,7 +79,7 @@ Put `.jpg` or `.png` files in `mywallpapers` with a file manager on the stick. I
 
 ## Why Home still mentions Amazon
 
-Fire OS will not let another app become the official Home app. Cyber watches for Amazon’s home and for the Home button, then opens itself. After a restart you may see Amazon for a moment. Cyber replaces it.
+Fire OS will not let another app become the official Home app. Cyber watches for Amazon’s home and for the Home button, then opens itself again. After you press Home, Amazon’s screen can stay up for a few seconds. Cyber replaces it. The same thing happens after a restart.
 
 ## Credits
 
