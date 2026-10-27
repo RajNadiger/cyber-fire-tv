@@ -282,11 +282,10 @@ public class HomeKeyService extends AccessibilityService {
             return true;
         }
         if (event.getKeyCode() == KeyEvent.KEYCODE_HOME) {
-            // Leave Amazon's home. Return false so Fire OS still refreshes its own home; the retries
-            // below pull Cyber forward after Fire OS stops blocking new activities.
             visitStockHome = false;
-            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openHome();
-            return false;
+            allowStockUntil = 0;
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) openHome();
+            return true;
         }
         if (event.getKeyCode() != KeyEvent.KEYCODE_ALL_APPS) return false;
         if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openHome();
@@ -303,12 +302,6 @@ public class HomeKeyService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
-        CharSequence pkgName = event.getPackageName();
-        // Cyber is up: stop the retries so they don't pull the person out of an app.
-        if (pkgName != null && getPackageName().contentEquals(pkgName)) {
-            bringToken++;
-            return;
-        }
         // app_keys "front:" entries: only activities count, so a toast or the volume bar doesn't change the app in front.
         if ((!frontAppKeys.isEmpty() || !frontAppScancodes.isEmpty())
                 && event.getPackageName() != null && event.getClassName() != null) {
@@ -334,7 +327,9 @@ public class HomeKeyService extends AccessibilityService {
         if (amazon || amazonHome) {
             if (visitStockHome && SystemClock.elapsedRealtime() < allowStockUntil) return;
             visitStockHome = false;
-            openHome();
+            // Already heading back: open again at once. Do not restart the wait.
+            if (bringing) openHomeNow();
+            else openHome();
         }
     }
 
@@ -442,13 +437,18 @@ public class HomeKeyService extends AccessibilityService {
     }
 
     private int bringToken;
+    private boolean bringing;
 
     private void openHome() {
+        if (bringing) {
+            openHomeNow();
+            return;
+        }
+        bringing = true;
         final int token = ++bringToken;
         openHomeNow();
-        // Fire OS blocks a new screen for several seconds after Home, then often puts Amazon back.
-        // Keep opening Cyber until its own window is in front.
-        for (int delay : new int[]{700, 1500, 2500, 4000, 5500, 7000, 9000}) {
+        // One chain. A later Amazon window must not start this wait over.
+        for (int delay : new int[]{400, 900, 1600, 2500, 4000}) {
             handler.postDelayed(() -> {
                 if (token == bringToken) openHomeNow();
             }, delay);
@@ -472,6 +472,11 @@ public class HomeKeyService extends AccessibilityService {
         try {
             startActivity(open);
         } catch (ActivityNotFoundException | SecurityException ignored) {
+        }
+        // Fire OS often ignores startActivity right after Home. The shell start is not in that block.
+        try {
+            Runtime.getRuntime().exec(new String[]{"am", "start", "-n", "com.gathin.tvhome/.MainActivity"});
+        } catch (java.io.IOException ignored) {
         }
     }
 
