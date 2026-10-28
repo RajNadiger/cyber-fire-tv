@@ -28,6 +28,7 @@
     <uses-permission android:name="yandex.tv.permission.ACCESS_TV_SOURCE" />
 
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Android 11+ package visibility: lets the launcher list the TV apps it shows as tiles, and the
          apps that declare a module card (docs/specs/card.md). -->
@@ -179,6 +180,16 @@
             android:theme="@android:style/Theme.NoDisplay" />
         <!-- Home button for remotes that send KEYCODE_ALL_APPS (Xiaomi). Opt-in: HOME_KEY_SERVICE=1
              build-and-install.sh; see HomeKeyService. -->
+        <receiver
+            android:name=".HomeWatch"
+            android:directBootAware="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="com.gathin.tvhome.HOME_WATCH" />
+            </intent-filter>
+        </receiver>
         <service
             android:name=".HomeKeyService"
             android:label="@string/home_key_name"

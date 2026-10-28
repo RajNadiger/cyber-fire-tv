@@ -11,6 +11,7 @@ import android.provider.Settings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Android takes an app's accessibility services off the enabled list when the app is force-stopped (Settings, a
@@ -22,6 +23,7 @@ import java.util.Objects;
  */
 final class ServiceRepair {
     private static final String PREFS = "accessibility_helpers";
+    private static final AtomicBoolean repairing = new AtomicBoolean();
 
     private ServiceRepair() {
     }
@@ -81,26 +83,26 @@ final class ServiceRepair {
                 updated.append(name.flattenToShortString());
             }
             if (!missing) return;
-            // A killed helper also lands on Android's "Crashed services" list (dumpsys accessibility), and a
-            // crashed service is never bound again, so putting it back on the list alone binds nothing and the
-            // switch falls back to 0 (Hisense songshan, Android 11, whose standby kills third-party apps). Android
-            // drops the crashed mark when it sees the helper leave the enabled list, so add, remove, add: after a
-            // force stop the list is already empty, and a removal that changes nothing is not seen. Off the main
-            // thread, so Home does not wait for the pauses. Each write first checks the list still reads what the
-            // previous step left, and the cycle stops otherwise: a service turned on or off during a pause stays
-            // that way instead of being overwritten by a snapshot.
             final String without = others.toString();
             final String with = updated.toString();
+            if (!repairing.compareAndSet(false, true)) return;
+            final String seen = list == null ? "" : list;
             new Thread(() -> {
                 try {
-                    if (!replaceList(cr, list, with)) return;
-                    Thread.sleep(1000);
+                    // On immediately. The remove-and-add below is only for a helper Android has marked crashed.
+                    if (!replaceList(cr, seen, with)) return;
+                    Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, 1);
+                    Thread.sleep(700);
+                    String now = Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+                    if (now != null && now.contains("HomeKeyService")) return;
                     if (!replaceList(cr, with, without)) return;
-                    Thread.sleep(1000);
+                    Thread.sleep(700);
                     if (!replaceList(cr, without, with)) return;
                     Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, 1);
                 } catch (RuntimeException | InterruptedException ignored) {
                     // The setting is the system's; a refusal leaves the helper off, as before.
+                } finally {
+                    repairing.set(false);
                 }
             }, "ServiceRepair").start();
         } catch (RuntimeException ignored) {

@@ -989,18 +989,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         tileRefresh.onStart();
     }
 
-    /** Screen-on puts the Home helper back after Fire OS drops it in sleep. One receiver for the process. */
-    private static boolean wakeRepairArmed;
-
     private void armWakeRepair() {
-        if (wakeRepairArmed) return;
-        wakeRepairArmed = true;
-        getApplicationContext().registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                ServiceRepair.ensure(context);
-            }
-        }, new IntentFilter(Intent.ACTION_SCREEN_ON));
+        HomeWatch.arm(this);
     }
 
     @Override
