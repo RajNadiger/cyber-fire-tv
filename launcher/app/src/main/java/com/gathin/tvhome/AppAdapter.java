@@ -137,7 +137,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** item_app.xml: 8dp padding above and below, a 7dp gap and the 22dp name label under the tile. */
     static final float ITEM_EXTRA_DP = 45;
     /** DockDecoration's offsets above and below the dock row. */
-    static final float DOCK_EXTRA_DP = 6 + 12;
+    static final float DOCK_EXTRA_DP = 6 + 16;
     /** Room kept under the last row rows_below_dock asks for (MainActivity places the dock with the same). */
     static final float BOTTOM_ROOM_DP = 30;
     /** Room kept above the dock for the dock title (48sp hero name plus its 40dp gap) when dock_title is on. */
@@ -521,24 +521,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
             h.icon.setVisibility(View.GONE);
-            h.label.setVisibility(View.GONE);
         } else {
             h.banner.setImageDrawable(null);
             h.banner.setVisibility(View.GONE);
             h.icon.setImageDrawable(e.icon);
             h.icon.setVisibility(View.VISIBLE);
-            h.label.setText(e.label);
-            if (e.label != null && e.label.length() > 11) {
-                h.label.setSingleLine(false);
-                h.label.setMaxLines(2);
-                h.label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
-            } else {
-                h.label.setSingleLine(true);
-                h.label.setMaxLines(1);
-                h.label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15);
-            }
-            h.label.setTypeface(AppMotion.typeface(ctx, e.pkg));
-            h.label.setVisibility(nameBelow || uniformTiles ? View.GONE : View.VISIBLE);
+        }
+        h.label.setVisibility(View.GONE);
+        if (dockRow && !singleRow && position >= dockSize && position < dockSize + MainActivity.COLUMNS) {
+            h.name.setVisibility(View.GONE);
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {

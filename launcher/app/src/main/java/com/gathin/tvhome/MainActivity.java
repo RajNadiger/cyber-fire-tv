@@ -1840,7 +1840,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
         hero.setVisibility(View.VISIBLE);
-        float y = Math.max(heroFloor(), anchorTop - 36f * density - hero.getHeight());
+        // The name stays on one line under the date. "Last opened" may appear under it,
+        // and that must not slide the name up or down as you move left and right.
+        float y = heroFloor();
         boolean changed = !label.contentEquals(heroName.getText());
         if (cinematic && heroArtAlpha > 0f) showHeroArt(position);
 
@@ -1932,7 +1934,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * scrimPercent of its strength (cinematic_scrim). cinematic_art 0 leaves the artwork out, 0 percent the scrim.
      */
     private void setUpCinematicShelf(int scrimPercent) {
-        heroName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 40f);
+        heroName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 44f);
         heroName.setLetterSpacing(0.01f);
         heroMeta.setVisibility(View.GONE);
         heroDots.setVisibility(heroDotsShown ? View.VISIBLE : View.GONE);

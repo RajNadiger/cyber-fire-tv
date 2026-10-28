@@ -20,29 +20,32 @@ Nothing is deleted.
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│  Good morning                                                │
-│  9:41          Wednesday                                     │
+│  Good morning                              weather · buttons │
+│  9:41          Wednesday                              TV     │
 │                                                              │
-│  Netflix                                                     │
-│  ━  ·  ·  ·  ·                                               │
+│  Netflix                    the name stays on this line      │
+│  ━  ·  ·  ·  ·              the mark moves, the name does not│
 │                                                              │
 │  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐      │
 │  │      │ │      │ │      │ │      │ │      │ │      │      │
 │  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘ └──────┘      │
-│   your apps, in one quiet row                                │
+│   the glass row. Pictures only. No words on the tiles.       │
 │                                                              │
-│                                    weather · buttons · TV    │
+│   ┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌────┐            │
+│   └────┘  └────┘  └────┘  └────┘  └────┘  └────┘            │
+│   the next row, fully on screen, no names underneath        │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 | You look at | It means |
 | --- | --- |
 | Greeting, clock, date | The time of day. The letters stay light. |
-| Large name | The app you have selected. Its colour follows that app. |
-| Short line and dots | Where you are along the row. |
-| The row of apps | Left and right on the remote. Press the centre to open one. |
+| Large name | The app you have selected. It stays in the same place as you move left and right. Its colour follows that app. |
+| Short line and dots | Where you are along the row. “Last opened” sits under the name when there is one, and does not move the name. |
+| Glass row | Your main apps. Pictures only. Left and right. Press the centre to open one. |
+| The row under it | The next apps, fully on screen. No names under those pictures. |
 | Weather | A small live forecast at the top. Press it for the next hours. |
-| Round buttons | Wi-Fi, inputs, apps, settings. |
+| Round buttons | Wi-Fi, inputs, apps, settings. The one you are on shows its name. |
 | **TV** | Amazon’s own home. It stays until you press Home. |
 
 ---
@@ -169,15 +172,17 @@ Android/data/com.gathin.tvhome/files/mywallpapers
 
 ## Use the stick as a second screen
 
-Same Wi-Fi. On the stick, open **Second screen**. On the computer, in this folder:
+Open **Second screen** on the TV. The screen itself is the guide.
 
-```sh
-python3 tools/second-screen.py
+```text
+   1  Same Wi-Fi          the stick and the computer, one network
+   2  Start sharing      python3 tools/second-screen.py
+   3  Press OK           the computer’s name appears, then the picture
 ```
 
-The computer needs [ffmpeg](https://ffmpeg.org/). On a Mac: `brew install ffmpeg`.
+The panel on the right waits, then turns flat and offers **Show this screen**. Press OK. Back leaves the picture and returns to the guide.
 
-The stick finds the computer and shows its screen.
+The computer needs [ffmpeg](https://ffmpeg.org/). On a Mac: `brew install ffmpeg`.
 
 ---
 
