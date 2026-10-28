@@ -69,6 +69,12 @@ Wait until it finishes.
 
 ### 4. Press Home
 
+Leave this running on the computer. Use the same address as the install.
+
+```sh
+TV_HOST=192.168.1.50 tools/venv/bin/python -I tools/tv.py 'sh /data/local/tmp/cyberhome.sh'
+```
+
 ```text
    the app you are in
           │
@@ -154,7 +160,7 @@ Press Back to leave the picture.
 | What you see | What to do |
 | --- | --- |
 | The computer cannot find the stick | Same Wi-Fi. Both switches on. Use the address from the stick. |
-| Home still shows Amazon | Press Home again. If it stays, run `./install.sh` again. |
+| Home still shows Amazon | The command in step 4 must still be running. Start it again. |
 | An app is missing | It was switched off. It was not deleted. |
 
 To turn those apps back on:
