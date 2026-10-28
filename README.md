@@ -1,22 +1,23 @@
-<div align="center">
+# Cyber Fire TV
 
-<img src="docs/wordmark.svg" alt="Cyber Fire TV. Press Home. Cyber opens. Your apps stay. Nothing is deleted." width="880">
+Press **Home**. Cyber opens, from any app.
+Your apps stay. Nothing is deleted.
 
-<br>
+<p align="center">
+  <img src="docs/home.png" alt="Cyber home: the time, the app name, and two rows of apps" width="880">
+</p>
 
-<img src="docs/home-card.png" alt="The Cyber home screen: greeting, clock, the app name, and two rows of apps" width="880">
+<p align="center">
+  <img src="docs/steps.png" alt="1 On the stick: turn on ADB debugging and Unknown sources. 2 Write down the address from About, Network. 3 Paste the three lines and use your address. 4 Press Home from any app." width="880">
+</p>
 
-<br>
+The stick and the computer use the same Wi-Fi.
 
-<img src="docs/caption.svg" alt="Time on the left. The name stays in one place. Apps are pictures only. Home opens this screen." width="880">
+On a Mac, one time:
 
-<br>
-
-<img src="docs/steps.svg" alt="Four steps. On the stick, turn on ADB debugging and Unknown Sources. Write down the network address. On the computer, install JDK 17 and run the three lines. Press Home." width="880">
-
-</div>
-
-### The three lines
+```sh
+brew install openjdk@17
+```
 
 `192.168.1.50` is an example. Use the address from the stick.
 
@@ -26,46 +27,26 @@ cd cyber-fire-tv
 ./install.sh 192.168.1.50
 ```
 
-<div align="center">
+The **TV** button opens Amazon. Home brings Cyber back.
 
-<img src="docs/remote.svg" alt="Home opens Cyber. Arrows move. Select opens an app. Back leaves a screen." width="880">
+**Your apps.** Settings, then Your apps. Change the name, the picture, or the colour.
 
-<br><br>
-
-<img src="docs/after.svg" alt="Settings can change an app name, picture, and colour. Second screen uses the same Wi-Fi. If it fails, check Wi-Fi, ADB, and the address, then run install again." width="880">
-
-</div>
-
-### Second screen
-
-On the stick, open **Second screen**. On the computer, the same Wi-Fi, with [ffmpeg](https://ffmpeg.org/) installed:
+**Second screen.** Open Second screen on the stick. On the computer, same Wi-Fi. One time on a Mac: `brew install ffmpeg`.
 
 ```sh
 python3 tools/second-screen.py
 ```
 
-On a Mac, one time: `brew install ffmpeg`. Press Select when the computer’s name appears. Back returns to the guide.
+**Wallpaper.** One picture, or a folder that changes about once a minute. Put `.jpg` or `.png` files in `Android/data/com.gathin.tvhome/files/mywallpapers`.
 
-### Wallpaper
+**If it fails.** Same Wi-Fi. Both switches on. The address from the stick. Run `./install.sh` again.
 
-In Settings, choose one picture, or a folder that changes about once a minute. Put `.jpg` or `.png` files here:
-
-```text
-Android/data/com.gathin.tvhome/files/mywallpapers
-```
-
-### Bring an app back
-
-Nothing is deleted. Ads go quiet. Netflix, YouTube, Prime Video, Spotify, Silk, the Appstore, Alexa, and Amazon’s own home stay.
+Nothing is deleted. Ads go quiet. The apps you use stay, and so does Amazon’s own home.
 
 ```sh
 TV_HOST=192.168.1.50 tools/restore.sh debloat/firetv.txt com.amazon.tv.launcher
 ```
 
-The **Restore** tile brings the earlier launcher back. It leaves the quiet apps quiet. The line above turns those back on too.
+The **Restore** tile brings the earlier launcher back. The line above turns the quiet apps back on too.
 
-### Credits
-
-The launcher, the tools, and the safety rules come from [CleanYourTV](https://github.com/Gathin23/cleanyourtv) by Gathin, MIT.
-
-The clock uses [Sora](https://fonts.google.com/specimen/Sora). The theme title face is [Chakra Petch](https://fonts.google.com/specimen/Chakra+Petch). Both are under the SIL Open Font License. See `LICENSE` and `NOTICE`.
+The launcher, the tools, and the safety rules come from [CleanYourTV](https://github.com/Gathin23/cleanyourtv) by Gathin, MIT. The clock uses [Sora](https://fonts.google.com/specimen/Sora). The theme title face is [Chakra Petch](https://fonts.google.com/specimen/Chakra+Petch). See `LICENSE` and `NOTICE`.
