@@ -70,6 +70,16 @@ Nothing is deleted.
 Home opens Cyber, including when you were in Netflix, YouTube, or any other app.
 After you tap the **TV** button, Amazon’s home stays up. Home brings Cyber back.
 
+```text
+   left  /  right     move along a row, and stop at the ends
+   down             the same column, one row lower
+   down again       Restore, Second screen, then App library
+   up               back the way you came
+   up from the top  the round buttons. The chosen one shows its name
+```
+
+The top row stays in place when you move to the row under it. The name stays above the apps. One more step down keeps that row on screen and shows Restore and Second screen under it, each with its name. Right stops at the end of a row. Down from there reaches **App library**. Up comes back the same way.
+
 Fire TV sometimes holds Amazon’s screen for a few seconds. That pause is Fire TV. Cyber comes forward as soon as the stick allows it.
 
 ```text

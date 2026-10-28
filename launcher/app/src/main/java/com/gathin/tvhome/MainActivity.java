@@ -210,6 +210,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** The VpnBadge pill state btnVpn shows, so a refresh that changes nothing does not restyle it. */
     private int vpnPillState = VpnBadge.PILL_HIDDEN;
     private SpringAnimation springX, springY;
+    private String glassStyle;
     private float glassTargetX, glassTargetY;
     // How far the grid has scrolled the glass. springY works without it, in grid content space, so a
     // scroll moves the glass in lockstep with its tile instead of becoming a moving spring target.
@@ -440,7 +441,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sky = findViewById(R.id.sky);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
-        glass.setStyle(cfg.glassStyle);
+        glassStyle = cfg.glassStyle;
+        glass.setStyle(glassStyle);
         if (festive) glass.setAccent(festival.accentColor());
         ambient = findViewById(R.id.ambient);
         // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
@@ -572,14 +574,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (dockRow && getPosition(child) < COLUMNS) return false;
                 int top = child.getTop() + rect.top;
                 int bottom = top + rect.height();
-                // A row already fully on screen stays put, even inside the bottom padding (the last row
-                // rows_below_dock leaves visible ends there; nudging it up was the bug). A row that has to scroll
-                // in still stops at the padding line, clear of the screen edge, as before.
-                int limitBottom = getHeight() - getPaddingBottom();
+                int visibleTop = getPaddingTop();
                 int dy;
-                if (top < 0) dy = top;
+                if (top < visibleTop) dy = top - visibleTop;
                 else if (bottom <= getHeight()) dy = 0;
-                else dy = Math.min(top, bottom - limitBottom);
+                else dy = bottom - getHeight();
+                // The dock stays on its line. Scrolling a row under it into view must not drag the
+                // dock up under the app name.
+                if (dockRow && dy > 0) {
+                    View dock = findViewByPosition(0);
+                    if (dock != null) {
+                        int room = dock.getTop() - getPaddingTop();
+                        if (dy > room) dy = Math.max(0, room);
+                    }
+                }
                 if (dy == 0) return false;
                 if (immediate || reducedMotion || !animations) parent.scrollBy(0, dy);
                 else parent.smoothScrollBy(0, dy);
@@ -1722,6 +1730,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             glassAccent = 0;
             glass.setAccent(0);
         }
+        // The dock sits in its glass bar. Below that, a filled slab reads as a box around the tile.
+        glass.setStyle(dockRow && position < COLUMNS ? glassStyle : Config.GLASS_RIM);
         if (!glassShown) {
             springX.cancel();
             springY.cancel();
@@ -1766,9 +1776,35 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (dockRect.top > floor + hero.getHeight()) anchor = dockRect.top;
             }
             showHero(position, anchor);
-            // Scroll just enough so the whole glass (not only the tile) is visible.
-            revealRect.set(0, -(int) pad * 2, item.getWidth(), item.getHeight() + (int) pad);
-            grid.requestChildRectangleOnScreen(item, revealRect, reducedMotion);
+            // The row directly under the dock belongs with that dock. Bring the dock back so this
+            // tile is not left alone under the title.
+            if (dockRow && position < COLUMNS * 2) {
+                GridLayoutManager lm = (GridLayoutManager) grid.getLayoutManager();
+                View dock = lm.findViewByPosition(0);
+                if (dock != null) {
+                    int back = dock.getTop() - grid.getPaddingTop();
+                    if (Math.abs(back) > (int) (8 * density)) {
+                        if (!animations || reducedMotion) grid.scrollBy(0, back);
+                        else grid.smoothScrollBy(0, back);
+                    }
+                } else {
+                    lm.scrollToPositionWithOffset(0, 0);
+                }
+            } else if (dockRow && position >= COLUMNS * 2) {
+                // Keep the row above on screen, so a short last row is not left alone in a void.
+                GridLayoutManager lm = (GridLayoutManager) grid.getLayoutManager();
+                int prev = (position / COLUMNS - 1) * COLUMNS;
+                View row = lm.findViewByPosition(prev);
+                if (row != null) {
+                    int dy = row.getTop() - grid.getPaddingTop();
+                    int limit = item.getBottom() - (grid.getHeight() - grid.getPaddingBottom());
+                    if (dy < limit) dy = limit;
+                    if (dy < -(int) (8 * density)) grid.scrollBy(0, dy);
+                }
+            } else {
+                revealRect.set(0, -(int) pad * 2, item.getWidth(), item.getHeight() + (int) pad);
+                grid.requestChildRectangleOnScreen(item, revealRect, reducedMotion);
+            }
         }
     }
 
@@ -2329,12 +2365,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Horizontal: swallow the key at a row's ends so focus never wraps to the next row or
         // escapes up into the top bar. Mid-row moves fall through to the default focus search.
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-            boolean forward = rtlAppGrid ? keyCode == KeyEvent.KEYCODE_DPAD_LEFT : keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
-            if (forward && position == adapter.focusablePosition(count - 1) && adapter.isLibraryAt(count)) {
-                focusLibrary();
-                return true;
-            }
-            // In the dock, the last app is the row's end: the empty slots after it take no focus.
             int rowCount = position < COLUMNS ? Math.min(count, adapter.dockFilled()) : count;
             return GridNavigation.atHorizontalEdge(position, rowCount, COLUMNS,
                     rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
@@ -2470,14 +2500,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
+    /** The tile Up returns to from App library. */
+    private int libraryReturn = -1;
+
     @Override public void onLibraryUp() {
         if (adapter.appCount() == 0) { firstTopButton().requestFocus(); return; }
-        int lastRow = ((adapter.appCount() - 1) / COLUMNS) * COLUMNS;
-        focusTile(Math.min(lastRow + lastFocused % COLUMNS, adapter.appCount() - 1));
+        int target = libraryReturn;
+        if (target < 0 || target >= adapter.appCount()) {
+            int lastRow = ((adapter.appCount() - 1) / COLUMNS) * COLUMNS;
+            target = Math.min(lastRow + Math.max(0, lastFocused) % COLUMNS, adapter.appCount() - 1);
+        }
+        focusTile(target);
     }
 
     private void focusLibrary() {
         cancelPendingFocusScroll();
+        libraryReturn = lastFocused;
         int position = adapter.appCount();
         if (!adapter.isLibraryAt(position)) return;
         RecyclerView.ViewHolder holder = grid.findViewHolderForAdapterPosition(position);
@@ -2556,8 +2594,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (pendingFocusScroll != this) return;
                 pendingFocusScroll = null;
                 RecyclerView.ViewHolder h = rv.findViewHolderForAdapterPosition(pos);
-                View target = h != null ? h.itemView.findViewById(R.id.card) : rv.getChildAt(0);
+                View target = h != null ? h.itemView.findViewById(R.id.card) : null;
                 if (target != null) target.requestFocus();
+                else rv.post(() -> {
+                    RecyclerView.ViewHolder again = rv.findViewHolderForAdapterPosition(pos);
+                    if (again != null) again.itemView.findViewById(R.id.card).requestFocus();
+                });
             }
         };
         grid.addOnScrollListener(pendingFocusScroll);

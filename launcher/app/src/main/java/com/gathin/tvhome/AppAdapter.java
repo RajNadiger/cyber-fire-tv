@@ -497,8 +497,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         boolean dockKind = dockRow && (singleRow || position < dockSize);
         boolean nameBelow = !(dockKind && restNameAlpha == 0f);
         h.name.setVisibility(nameBelow ? View.VISIBLE : View.INVISIBLE);
-        boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
+        boolean focused = h.card.isFocused();
         h.name.setAlpha(focused ? 1f : restNameAlpha);
+        int apps = appCount();
+        boolean shortLast = dockRow && !singleRow && apps > dockSize && position >= dockSize
+                && position / MainActivity.COLUMNS == (apps - 1) / MainActivity.COLUMNS
+                && apps % MainActivity.COLUMNS != 0;
+        if (shortLast) h.name.setAlpha(focused ? 1f : 0.92f);
         h.card.setScaleX(focused && animations ? focusScale() : 1f);
         h.card.setScaleY(focused && animations ? focusScale() : 1f);
         h.card.setTranslationY(focused && advancedEffects ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
