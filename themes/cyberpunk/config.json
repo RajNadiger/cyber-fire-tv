@@ -30,6 +30,7 @@
   "header_white": true,
   "date_below_clock": true,
   "icon_only_buttons": true,
+  "show_inputs_pill": false,
   "icon_only_inputs": true,
   "dock_title": true,
   "app_library": true,

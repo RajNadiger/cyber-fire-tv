@@ -45,7 +45,7 @@ Nothing is deleted.
 | Glass row | Your main apps. Pictures only. Left and right. Press the centre to open one. |
 | The row under it | The next apps, fully on screen. No names under those pictures. |
 | Weather | A small live forecast at the top. Press it for the next hours. |
-| Round buttons | Wi-Fi, inputs, apps, settings. The one you are on shows its name. |
+| Round buttons | Wi-Fi, apps, and settings. The one you are on shows its name. A Fire TV Stick has no HDMI ports of its own, so there is no Inputs button. |
 | **TV** | Amazon’s own home. It stays until you press Home. |
 
 ---
