@@ -38,6 +38,8 @@ fi
 
 echo "4/4  Home button and startup"
 "$PY" -I tools/tv.py 'pm grant com.gathin.tvhome android.permission.WRITE_SECURE_SETTINGS; pm grant com.gathin.tvhome android.permission.READ_LOGS; settings put secure enabled_accessibility_services ""; settings put secure accessibility_enabled 0; settings put secure enabled_accessibility_services com.gathin.tvhome/.HomeKeyService; settings put secure accessibility_enabled 1; am start -n com.gathin.tvhome/.MainActivity'
+"$PY" -I tools/b64push.py tools/cyberhome.sh /data/local/tmp/cyberhome.sh
+"$PY" -I tools/tv.py 'chmod 755 /data/local/tmp/cyberhome.sh'
 echo
 echo "Cyber is on the Fire TV. Home opens it from any app. The TV icon at the top right opens Amazon home."
 echo "Add pictures to Android/data/com.gathin.tvhome/files/mywallpapers"

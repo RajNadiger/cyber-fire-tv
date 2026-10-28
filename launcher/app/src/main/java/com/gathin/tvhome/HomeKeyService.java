@@ -29,6 +29,7 @@ import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
+import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -362,10 +363,7 @@ public class HomeKeyService extends AccessibilityService {
             if (visitStockHome && SystemClock.elapsedRealtime() < allowStockUntil) return;
             visitStockHome = false;
             cyberInFront = false;
-            if (!visitStockHome) {
-                coverScreen();
-                openHomeNow();
-            }
+            if (!visitStockHome) openHomeNow();
         }
     }
 
@@ -501,18 +499,25 @@ public class HomeKeyService extends AccessibilityService {
     /** Fire OS handles Home in the system, so this service never sees the key. The press is logged. */
     private void watchRemoteHome() {
         if (homePressWatch != null) return;
-        if (checkSelfPermission(android.Manifest.permission.READ_LOGS) != PackageManager.PERMISSION_GRANTED) return;
+        if (checkSelfPermission(android.Manifest.permission.READ_LOGS) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("CyberHome", "no log permission");
+            return;
+        }
         homePressWatch = new Thread(() -> {
+            Log.i("CyberHome", "watching");
             try {
-                logcat = new ProcessBuilder("/system/bin/logcat", "-b", "main", "-b", "system",
-                        "-T", "1", "-e", "handleShortPressOnHome")
+                logcat = new ProcessBuilder("/system/bin/logcat", "-b", "system", "-T", "1")
                         .redirectErrorStream(true).start();
                 BufferedReader in = new BufferedReader(new InputStreamReader(logcat.getInputStream()));
                 String line;
                 while ((line = in.readLine()) != null) {
-                    if (remoteHomeLine(line)) handler.post(this::onRemoteHome);
+                    if (remoteHomeLine(line)) {
+                        shellStart();
+                        handler.post(this::onRemoteHome);
+                    }
                 }
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                Log.e("CyberHome", "logcat stopped", e);
             } finally {
                 // Sleep can kill logcat while this service stays bound. A dead reader must start again.
                 homePressWatch = null;
@@ -527,6 +532,7 @@ public class HomeKeyService extends AccessibilityService {
     private void onRemoteHome() {
         visitStockHome = false;
         allowStockUntil = 0;
+        Log.i("CyberHome", "remote home");
         openHome();
     }
 
@@ -535,15 +541,14 @@ public class HomeKeyService extends AccessibilityService {
         if (now - lastOpen < 80) return;
         lastOpen = now;
         if (visitStockHome) return;
-        if (!cyberInFront) coverScreen();
         final int token = ++bringToken;
         openHomeNow();
         handler.postDelayed(() -> {
             if (token == bringToken && !cyberInFront) openHomeNow();
-        }, 400);
+        }, 120);
         handler.postDelayed(() -> {
             if (token == bringToken && !cyberInFront) openHomeNow();
-        }, 800);
+        }, 280);
     }
 
     /** Puts the shade above Fire TV. A shade added earlier sits under the home window Fire TV opens later. */
@@ -610,21 +615,14 @@ public class HomeKeyService extends AccessibilityService {
             startActivity(open);
         } catch (ActivityNotFoundException | SecurityException ignored) {
         }
-        try {
-            Runtime.getRuntime().exec(new String[]{"/system/bin/am", "start", "-n", "com.gathin.tvhome/.MainActivity"});
-        } catch (java.io.IOException ignored) {
-        }
+        shellStart();
         launchThroughSystem(open);
     }
 
-    /** The system itself opens Cyber. A start from this app is ignored while Fire TV is handling Home. */
+    /** Asked of the system, so Fire TV's block on this app does not apply. The notice is removed at once. */
     private void launchThroughSystem(Intent open) {
         PendingIntent openNow = PendingIntent.getActivity(this, 7, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        try {
-            openNow.send();
-        } catch (PendingIntent.CanceledException ignored) {
-        }
         NotificationManager notices = getSystemService(NotificationManager.class);
         if (notices == null) return;
         NotificationChannel channel = new NotificationChannel(
@@ -638,11 +636,39 @@ public class HomeKeyService extends AccessibilityService {
                     .setContentTitle("Cyber")
                     .setFullScreenIntent(openNow, true)
                     .setCategory(Notification.CATEGORY_ALARM)
-                    .setPriority(Notification.PRIORITY_MAX)
-                    .setTimeoutAfter(800)
+                    .setTimeoutAfter(400)
                     .build());
+            handler.postDelayed(() -> notices.cancel(7), 200);
         } catch (RuntimeException ignored) {
         }
+    }
+
+    private static void trace(String s) {
+        try {
+            java.io.FileWriter w = new java.io.FileWriter(
+                    "/sdcard/Android/data/com.gathin.tvhome/files/trace.txt", true);
+            w.write(System.currentTimeMillis() + " " + s + "\n");
+            w.close();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Runs the moment Home is logged, on that thread, so it is not waiting behind the screen work. */
+    private static void shellStart() {
+        new Thread(() -> {
+            try {
+                Process p = new ProcessBuilder("/system/bin/am", "start", "-n",
+                        "com.gathin.tvhome/.MainActivity")
+                        .redirectErrorStream(true).start();
+                java.io.BufferedReader out = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(p.getInputStream()));
+                String line;
+                while ((line = out.readLine()) != null) Log.i("CyberHome", line);
+                Log.i("CyberHome", "exit " + p.waitFor());
+            } catch (Exception e) {
+                Log.e("CyberHome", "start failed", e);
+            }
+        }, "cyber-am").start();
     }
 
     /** stock_home_redirect while Android's Home is still the stock launcher (launcherx on Google TV outranks this
