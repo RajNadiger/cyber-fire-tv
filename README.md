@@ -2,17 +2,70 @@
 
 # Cyber Fire TV
 
-A calm home screen for a Fire TV Stick.
+A quiet home screen for a Fire TV Stick.
 
 Press **Home**. Cyber opens.
 Your apps stay. The ads go quiet.
 Nothing is deleted.
 
-<img src="docs/home.png" alt="Cyber home screen: greeting, clock, the app name, and a row of apps" width="920">
+<img src="docs/home.png" alt="Cyber home: greeting, clock, the app name, and two rows of apps" width="920">
 
-<sub>Greeting and clock on the left. The app you are on, in the middle. Your apps along the bottom.</sub>
+<sub>Time on the left. The app you are on, in the middle. Your apps along the bottom. Pictures only.</sub>
 
 </div>
+
+---
+
+## Put it on the stick
+
+The stick and the computer sit on the **same Wi-Fi**.
+One command does the rest.
+
+```text
+        YOUR COMPUTER                         FIRE TV STICK
+   ┌──────────────────────┐              ┌──────────────────────┐
+   │                      │              │                      │
+   │    ./install.sh      │  same Wi-Fi  │   ADB debugging on   │
+   │                      │ ───────────► │   Unknown sources    │
+   │                      │              │                      │
+   └──────────────────────┘              └──────────────────────┘
+              │                                      │
+              │   1   ads go quiet                   │
+              │   2   Cyber is built                 │
+              │   3   the night look is applied      │
+              │   4   Home opens Cyber               ▼
+                                                Cyber is on screen
+```
+
+### On the stick, four taps
+
+1. **Settings → My Fire TV → Developer options**
+2. Turn on **ADB debugging**
+3. Turn on **Apps from Unknown Sources**
+4. **Settings → My Fire TV → About → Network** — write down the address
+
+### On the computer
+
+You need [JDK 17](https://adoptium.net/). On a Mac: `brew install openjdk@17`.
+
+```sh
+git clone https://github.com/RajNadiger/cyber-fire-tv.git
+cd cyber-fire-tv
+./install.sh 192.168.1.50
+```
+
+`192.168.1.50` is only an example. Type the address from the stick.
+
+When it finishes, press **Home**. Cyber is there.
+
+```text
+   you press Home
+         │
+         ▼
+   Cyber                    clock, name, your apps
+```
+
+The **TV** button opens Amazon’s own home. It stays until you press Home again.
 
 ---
 
@@ -20,8 +73,9 @@ Nothing is deleted.
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│  Good morning                              weather · buttons │
-│  9:41          Wednesday                              TV     │
+│  Good afternoon                            weather · buttons │
+│  4:19 PM                                                   │
+│  Wednesday, October 28                                      │
 │                                                              │
 │  Netflix                    the name stays on this line      │
 │  ━  ·  ·  ·  ·              the mark moves, the name does not│
@@ -29,34 +83,30 @@ Nothing is deleted.
 │  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐      │
 │  │      │ │      │ │      │ │      │ │      │ │      │      │
 │  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘ └──────┘      │
-│   the glass row. Pictures only. No words on the tiles.       │
+│   the glass row. Pictures only.                              │
 │                                                              │
 │   ┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌────┐            │
 │   └────┘  └────┘  └────┘  └────┘  └────┘  └────┘            │
-│   the next row, fully on screen, no names underneath        │
+│   the next row, fully on screen. No names under the pictures│
 └──────────────────────────────────────────────────────────────┘
 ```
 
 | You look at | It means |
 | --- | --- |
-| Greeting, clock, date | The time of day. The letters stay light. |
-| Large name | The app you have selected. It stays in the same place as you move left and right. Its colour follows that app. |
-| Short line and dots | Where you are along the row. “Last opened” sits under the name when there is one, and does not move the name. |
-| Glass row | Your main apps. Pictures only. Left and right. Press the centre to open one. |
+| Greeting, clock, date | The time of day. |
+| Large name | The app you have selected. It stays in the same place as you move. Its colour follows that app. |
+| Short line and dots | Where you are along the row. “Last opened” sits under the name and does not move it. |
+| Glass row | Your main apps. Pictures only. Press the centre to open one. |
 | The row under it | The next apps, fully on screen. No names under those pictures. |
-| Weather | A small live forecast at the top. Press it for the next hours. |
-| Round buttons | Wi-Fi, apps, and settings. The one you are on shows its name. A Fire TV Stick has no HDMI ports of its own, so there is no Inputs button. |
-| **TV** | Amazon’s own home. It stays until you press Home. |
+| Weather | A small forecast at the top. Press it for the next hours. |
+| Round buttons | Wi-Fi, apps, and settings. The one you are on shows its name. A Fire TV Stick has no HDMI ports, so there is no Inputs button. |
+| **TV** | Amazon’s own home, until you press Home. |
 
 ---
 
 ## The remote
 
 ```text
-                    ┌─────────┐
-                    │  power  │
-                    └─────────┘
-
                     ┌─────────┐
                     │  HOME   │     opens Cyber
                     └─────────┘
@@ -70,30 +120,18 @@ Nothing is deleted.
                     └─────────┘
 ```
 
-Home opens Cyber, including when you were in Netflix, YouTube, or any other app.
-After you tap the **TV** button, Amazon’s home stays up. Home brings Cyber back.
-
 ```text
-   left  /  right     move along a row, and stop at the ends
-   down             the same column, one row lower
-   down again       Restore, Second screen, then App library
-   up               back the way you came
-   up from the top  the round buttons. The chosen one shows its name
+   left  /  right     along a row, and stop at the ends
+   down               the same column, one row lower
+   down again         Restore, Second screen, then App library
+   up                 back the way you came
+   up from the top    the round buttons. The chosen one shows its name
 ```
 
-The top row stays in place when you move to the row under it. The name stays above the apps. One more step down keeps that row on screen and shows Restore and Second screen under it, each with its name. Right stops at the end of a row. Down from there reaches **App library**. Up comes back the same way.
+Home opens Cyber from Netflix, YouTube, or any other app.
+After the stick sleeps and wakes, Home still opens Cyber.
 
-Fire TV sometimes holds Amazon’s screen for a few seconds. That pause is Fire TV. Cyber comes forward as soon as the stick allows it.
-
-```text
-   you press Home
-         │
-         ▼
-   Amazon’s screen          a short pause, on some sticks
-         │
-         ▼
-   Cyber                    your clock, your apps
-```
+The top row stays in place when you move to the row under it. One more step down keeps that row on screen and shows Restore and Second screen, each with its name.
 
 ---
 
@@ -105,7 +143,7 @@ Open **Settings**, then **Your apps**.
    Your apps
    ┌─────────────────────┐     ┌─────────────────────┐
    │  Netflix            │     │                     │
-   │  YouTube            │     │      the tile       │
+   │  YouTube            │     │      the picture    │
    │  Prime Video     ▶  │ ──► │                     │
    │  Spotify            │     │   the name you set  │
    └─────────────────────┘     └─────────────────────┘
@@ -123,8 +161,6 @@ Open **Settings**, then **Your apps**.
 | The app’s own look back | **Put the app’s own look back**. |
 
 Home updates when you leave Settings.
-
-A picture can also be a jpg or png you copy into the stick’s `icons` folder, or into `mywallpapers`. Then open **Change the picture** again.
 
 **Font**, on the settings page, changes the letters for the clock, the date, and the names, all together.
 
@@ -162,10 +198,6 @@ Put `.jpg` or `.png` files here, with a file manager on the stick:
 
 ```text
 Android/data/com.gathin.tvhome/files/mywallpapers
-        │
-        ├──  night.jpg
-        ├──  rain.png
-        └──  desk.webp
 ```
 
 ---
@@ -180,50 +212,9 @@ Open **Second screen** on the TV. The screen itself is the guide.
    3  Press OK           the computer’s name appears, then the picture
 ```
 
-The panel on the right waits, then turns flat and offers **Show this screen**. Press OK. Back leaves the picture and returns to the guide.
-
 The computer needs [ffmpeg](https://ffmpeg.org/). On a Mac: `brew install ffmpeg`.
 
----
-
-## Put it on a stick
-
-One command. Apps stay installed. Ads are only switched off.
-
-```text
-   your computer                         Fire TV Stick
-   ┌─────────────────────┐               ┌─────────────────────┐
-   │  this folder        │   same Wi-Fi  │  ADB debugging on   │
-   │  ./install.sh       │ ────────────► │  Unknown sources on │
-   └─────────────────────┘               └─────────────────────┘
-          │                                         │
-          │   1  ads go quiet                       │
-          │   2  Cyber is built                     │
-          │   3  the night look is applied          │
-          │   4  Home opens Cyber                   ▼
-                                               Cyber is on screen
-```
-
-### On the stick
-
-1. **Settings → My Fire TV → Developer options**
-2. Turn on **ADB debugging**
-3. Turn on **Apps from Unknown Sources**
-4. Note the address under **Settings → My Fire TV → About → Network**
-
-### On the computer
-
-You need [JDK 17](https://adoptium.net/). On a Mac: `brew install openjdk@17`.
-
-```sh
-git clone https://github.com/RajNadiger/cyber-fire-tv.git
-cd cyber-fire-tv
-./install.sh 192.168.1.50
-```
-
-`192.168.1.50` is an example. Use the address from the stick.
-
-When it finishes, Home opens Cyber. The **TV** button opens Amazon’s home.
+Back leaves the picture and returns to the guide.
 
 ---
 
@@ -257,12 +248,14 @@ Undo the whole list. Amazon’s launcher is named so it is left on:
 TV_HOST=192.168.1.50 tools/restore.sh debloat/firetv.txt com.amazon.tv.launcher
 ```
 
+The **Restore** tile brings the earlier launcher back. It does not turn the quiet packages back on. Use `tools/restore.sh` for those.
+
 ---
 
 ## After the stick restarts
 
 ```text
-   unplug  →  plug in  →  turn the TV on  →  Cyber
+   unplug  →  plug in  →  turn the TV on  →  press Home  →  Cyber
 ```
 
 Fire TV will not let another app become the official Home app. Amazon’s launcher stays installed. Cyber watches the Home button and opens itself again.
@@ -274,9 +267,8 @@ Fire TV will not let another app become the official Home app. Amazon’s launch
 | What you see | What to do |
 | --- | --- |
 | The computer cannot find the stick | Same Wi-Fi. ADB debugging on. Use the address from About → Network. |
-| Home still shows Amazon | Wait a few seconds. If it never changes, run `./install.sh` again. |
+| Home still shows Amazon | Wait a few seconds, then press Home again. If it never changes, run `./install.sh` again. |
 | An app is missing from the row | It was switched off, not deleted. Turn that package back on, or run `tools/restore.sh`. |
-| You want the earlier launcher | Open the **Restore** tile. That does not turn the quiet packages back on. Use `tools/restore.sh` for those. |
 
 ---
 

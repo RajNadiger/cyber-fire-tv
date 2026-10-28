@@ -1833,7 +1833,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int[] rootAt = new int[2];
         header.getLocationOnScreen(headerAt);
         root.getLocationOnScreen(rootAt);
-        return headerAt[1] - rootAt[1] + header.getHeight() + 8f * density;
+        return headerAt[1] - rootAt[1] + header.getHeight() + 26f * density;
     }
 
     private void showHero(int position, float anchorTop) {
