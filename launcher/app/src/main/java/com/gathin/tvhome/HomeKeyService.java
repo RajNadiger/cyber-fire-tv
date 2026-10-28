@@ -158,7 +158,7 @@ public class HomeKeyService extends AccessibilityService {
         if (gamepads != null) gamepads.stop();
         if (consumeVolumeKeys) VolumeKeys.stop();
         if (logcat != null) logcat.destroy();
-        uncover();
+        removeCover();
         super.onDestroy();
     }
 
@@ -238,7 +238,10 @@ public class HomeKeyService extends AccessibilityService {
         }
         stockHomeIsDefault = stockHomeStays();
         if (!stockHome.isEmpty() || !powerOnLiveTv.isEmpty()) probeAtBoot();
-        if (!stockHomePackage.isEmpty()) watchRemoteHome();
+        if (!stockHomePackage.isEmpty()) {
+            watchRemoteHome();
+            prepareCover();
+        }
         armStandbyExit();
         holdAppKeys = RemoteKeys.parseHoldAppKeys(config.appKeys);
         holdAppScancodes = RemoteKeys.parseHoldAppScancodes(config.appKeys);
@@ -521,22 +524,26 @@ public class HomeKeyService extends AccessibilityService {
     }
 
     private void openHome() {
+        if (visitStockHome) return;
         if (!cyberInFront) coverScreen();
         final int token = ++bringToken;
         openHomeNow();
-        // Fire TV often ignores the first open. One more, almost at once, if Cyber is not up yet.
         handler.postDelayed(() -> {
             if (token == bringToken && !cyberInFront) openHomeNow();
-        }, 80);
+        }, 120);
+        handler.postDelayed(() -> {
+            if (token == bringToken && !cyberInFront) uncover();
+        }, 1000);
     }
 
-    /** Hides Amazon's home the moment it appears, until this launcher's own window is up. */
-    private void coverScreen() {
-        if (cover != null || visitStockHome) return;
+    /** The shade is added once and only shown for the moment between Home and Cyber. */
+    private void prepareCover() {
+        if (cover != null) return;
         WindowManager wm = getSystemService(WindowManager.class);
         if (wm == null) return;
         View shade = new View(this);
         shade.setBackgroundColor(0xFF05060C);
+        shade.setVisibility(View.GONE);
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -555,7 +562,18 @@ public class HomeKeyService extends AccessibilityService {
         }
     }
 
+    /** Hides Fire TV until Cyber's own window is up. */
+    private void coverScreen() {
+        if (visitStockHome) return;
+        if (cover == null) prepareCover();
+        if (cover != null) cover.setVisibility(View.VISIBLE);
+    }
+
     private void uncover() {
+        if (cover != null) cover.setVisibility(View.GONE);
+    }
+
+    private void removeCover() {
         if (cover == null || windowManager == null) return;
         try {
             windowManager.removeView(cover);
@@ -588,10 +606,6 @@ public class HomeKeyService extends AccessibilityService {
             Runtime.getRuntime().exec(new String[]{"am", "start", "-n", "com.gathin.tvhome/.MainActivity"});
         } catch (java.io.IOException ignored) {
         }
-        final int covered = coverToken;
-        handler.postDelayed(() -> {
-            if (covered == coverToken) uncover();
-        }, 450);
     }
 
     /** stock_home_redirect while Android's Home is still the stock launcher (launcherx on Google TV outranks this
