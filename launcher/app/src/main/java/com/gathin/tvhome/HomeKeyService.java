@@ -9,11 +9,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.app.AlarmManager;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
@@ -82,6 +77,8 @@ public class HomeKeyService extends AccessibilityService {
     private final Set<String> stockHome = new HashSet<>();
     /** stock_home_redirect, the stock launcher's package. */
     private String stockHomePackage = "";
+    /** True when Amazon, not Cyber, is the resolved Home app. Read once per bind, not on every press. */
+    private boolean stockHomeIsDefault;
     /** power_on_home: the Live TV package to send back to Home, empty when off; armed until this uptime or a key. */
     private String powerOnLiveTv = "";
     private long powerOnUntil;
@@ -239,6 +236,7 @@ public class HomeKeyService extends AccessibilityService {
             info.eventTypes |= AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;
             setServiceInfo(info);
         }
+        stockHomeIsDefault = stockHomeStays();
         if (!stockHome.isEmpty() || !powerOnLiveTv.isEmpty()) probeAtBoot();
         if (!stockHomePackage.isEmpty()) watchRemoteHome();
         armStandbyExit();
@@ -341,21 +339,20 @@ public class HomeKeyService extends AccessibilityService {
         // window from that package back here closed Settings as soon as it opened.
         CharSequence pkgName = event.getPackageName();
         if (pkgName != null && getPackageName().contentEquals(pkgName)) {
+            cyberInFront = true;
             int token = ++coverToken;
-            handler.postDelayed(() -> {
+            handler.post(() -> {
                 if (token == coverToken) uncover();
-            }, 400);
+            });
+        } else if (pkgName != null) {
+            cyberInFront = false;
         }
         CharSequence cls = event.getClassName();
         if (amazonHomeWindow(pkgName, cls)) {
             if (visitStockHome && SystemClock.elapsedRealtime() < allowStockUntil) return;
             visitStockHome = false;
-            // The app that was open does not matter. A game, Settings, or Amazon's own
-            // home all land here when the remote's Home button brings that home forward.
-            coverToken++;
-            coverScreen();
-            if (bringing) openHomeNow();
-            else openHome();
+            cyberInFront = false;
+            openHome();
         }
     }
 
@@ -462,11 +459,11 @@ public class HomeKeyService extends AccessibilityService {
         return upTime - downTime < longPressTimeout;
     }
 
-    private int bringToken;
-    private boolean bringing;
     private Process logcat;
     private Thread homePressWatch;
     private long lastRemoteHome;
+    /** True while this launcher's own window is the one on screen. */
+    private boolean cyberInFront;
     private View cover;
     private WindowManager windowManager;
     private int coverToken;
@@ -482,13 +479,9 @@ public class HomeKeyService extends AccessibilityService {
         return lower.contains("home");
     }
 
-    /** A system log line for the remote's Home button. The foreground app is not part of the line. */
+    /** The one log line Fire OS writes for a short Home press. Other HOME lines are noise and were delaying this. */
     static boolean remoteHomeLine(String line) {
-        if (line == null || line.contains("tvhome")) return false;
-        return line.contains("handleShortPressOnHome")
-                || line.contains("KEYCODE_HOME")
-                || line.contains("keyCode=HOME")
-                || line.contains("keyCode: HOME");
+        return line != null && line.contains("handleShortPressOnHome");
     }
 
     /** Fire OS handles Home in the system, so this service never sees the key. The press is logged. */
@@ -498,7 +491,7 @@ public class HomeKeyService extends AccessibilityService {
         homePressWatch = new Thread(() -> {
             try {
                 logcat = new ProcessBuilder("/system/bin/logcat", "-b", "main", "-b", "system",
-                        "-T", "1", "-e", "handleShortPressOnHome|KEYCODE_HOME|keyCode=HOME|keyCode: HOME")
+                        "-T", "1", "-e", "handleShortPressOnHome")
                         .redirectErrorStream(true).start();
                 BufferedReader in = new BufferedReader(new InputStreamReader(logcat.getInputStream()));
                 String line;
@@ -516,30 +509,19 @@ public class HomeKeyService extends AccessibilityService {
         homePressWatch.start();
     }
 
-    /** The real remote's Home button, including when Amazon's home is already the screen in front. */
+    /** Every Home press, including a rapid repeat. A second log line for the same press is ignored. */
     private void onRemoteHome() {
         long now = SystemClock.elapsedRealtime();
-        if (now - lastRemoteHome < 800) return;
+        if (now - lastRemoteHome < 40) return;
         lastRemoteHome = now;
         visitStockHome = false;
         allowStockUntil = 0;
-        coverScreen();
         openHome();
     }
 
     private void openHome() {
-        bringing = true;
-        final int token = ++bringToken;
+        if (!cyberInFront) coverScreen();
         openHomeNow();
-        // A busy app can make the first open lose to Amazon. Try again at once, not after several seconds.
-        for (int delay : new int[]{60, 140, 280, 500, 900}) {
-            handler.postDelayed(() -> {
-                if (token == bringToken) openHomeNow();
-            }, delay);
-        }
-        handler.postDelayed(() -> {
-            if (token == bringToken) bringing = false;
-        }, 1200);
     }
 
     /** Hides Amazon's home the moment it appears, until this launcher's own window is up. */
@@ -578,13 +560,14 @@ public class HomeKeyService extends AccessibilityService {
 
     private void openHomeNow() {
         Intent open;
-        if (stockHomeStays()) {
+        if (stockHomeIsDefault) {
             // Fire OS keeps Amazon as the real Home app. A Home-category intent is handed back to it,
             // so open this launcher by name instead.
             open = new Intent(this, MainActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                             | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            | Intent.FLAG_ACTIVITY_NO_ANIMATION);
         } else {
             open = new Intent(Intent.ACTION_MAIN).setPackage(getPackageName())
                     .addCategory(Intent.CATEGORY_HOME)
@@ -593,43 +576,16 @@ public class HomeKeyService extends AccessibilityService {
         try {
             startActivity(open);
         } catch (ActivityNotFoundException | SecurityException ignored) {
-        }
-        // Fire OS blocks an app from opening for several seconds after Home. A full-screen
-        // alert and an alarm are launched by the system, which is allowed through that hold.
-        launchThroughSystem(open);
-        try {
-            Runtime.getRuntime().exec(new String[]{"am", "start", "-n", "com.gathin.tvhome/.MainActivity"});
-        } catch (java.io.IOException ignored) {
-        }
-    }
-
-    private void launchThroughSystem(Intent open) {
-        PendingIntent openNow = PendingIntent.getActivity(this, 7, open,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        NotificationManager notices = getSystemService(NotificationManager.class);
-        if (notices != null) {
-            NotificationChannel channel = new NotificationChannel(
-                    "cyber-home", "Home", NotificationManager.IMPORTANCE_HIGH);
-            channel.setSound(null, null);
-            channel.enableVibration(false);
-            notices.createNotificationChannel(channel);
             try {
-                notices.notify(7, new Notification.Builder(this, "cyber-home")
-                        .setSmallIcon(R.drawable.ic_home_settings)
-                        .setContentTitle("Cyber")
-                        .setFullScreenIntent(openNow, true)
-                        .setCategory(Notification.CATEGORY_ALARM)
-                        .setPriority(Notification.PRIORITY_MAX)
-                        .setTimeoutAfter(1500)
-                        .build());
-            } catch (RuntimeException ignored) {
+                Runtime.getRuntime().exec(new String[]{
+                        "am", "start", "-n", "com.gathin.tvhome/.MainActivity", "--activity-no-animation"});
+            } catch (java.io.IOException ignoredToo) {
             }
         }
-        AlarmManager alarms = getSystemService(AlarmManager.class);
-        if (alarms != null) {
-            alarms.setAlarmClock(new AlarmManager.AlarmClockInfo(System.currentTimeMillis(), openNow), openNow);
-            handler.postDelayed(() -> alarms.cancel(openNow), 1500);
-        }
+        final int covered = coverToken;
+        handler.postDelayed(() -> {
+            if (covered == coverToken) uncover();
+        }, 450);
     }
 
     /** stock_home_redirect while Android's Home is still the stock launcher (launcherx on Google TV outranks this
