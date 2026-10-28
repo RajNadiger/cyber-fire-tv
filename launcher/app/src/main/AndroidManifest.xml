@@ -8,6 +8,7 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at
          runtime: build-and-install grants it with pm grant, so lint's Android 12 "ask for COARSE with
@@ -17,6 +18,10 @@
     <!-- Puts the remote's accessibility helpers back after a force stop of this app took them off the enabled
          list (ServiceRepair). Granted with pm grant by build-and-install when a helper is enabled. -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Fire OS handles the Home key inside the system and does not deliver it to an accessibility
+         service. The press is still written to the log. Granted with pm grant, same as the permission above. -->
+    <uses-permission android:name="android.permission.READ_LOGS"
         tools:ignore="ProtectedPermissions" />
     <!-- YaOS (Yandex TV OS): HDMI, AV and the tuner all play in com.yandex.tv.live, whose activities require
          this permission (protection level normal, so it is granted at install). Ignored on other TVs. -->
@@ -78,6 +83,7 @@
         android:banner="@drawable/banner"
         android:theme="@style/Theme.TvHome"
         android:allowBackup="false"
+        android:usesCleartextTraffic="true"
         android:localeConfig="@xml/locales_config">
 
         <activity
@@ -105,6 +111,7 @@
             android:name=".RestoreActivity"
             android:exported="true"
             android:excludeFromRecents="true"
+            android:taskAffinity="com.gathin.tvhome.restore"
             android:label="@string/restore_app"
             android:screenOrientation="landscape">
             <intent-filter>
@@ -114,7 +121,25 @@
         </activity>
 
         <activity
+            android:name=".SecondScreenActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity="com.gathin.tvhome.secondscreen"
+            android:label="@string/second_screen"
+            android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".LauncherSettingsActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".AppStudioActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:screenOrientation="landscape" />

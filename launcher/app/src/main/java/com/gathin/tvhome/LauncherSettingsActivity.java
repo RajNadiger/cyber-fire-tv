@@ -73,6 +73,7 @@ public final class LauncherSettingsActivity extends Activity {
         Config config = Config.load(this);
         View reorderChoice = findViewById(R.id.reorderChoice);
         reorderChoice.setVisibility(config.launcherSettingsButton ? View.VISIBLE : View.GONE);
+        watch(reorderChoice, R.string.settings_reorder_hint);
         reorderChoice.setOnClickListener(v -> {
             setResult(RESULT_OK, new Intent().putExtra(EXTRA_REORDER, true));
             finish();
@@ -87,6 +88,7 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < ids.length; i++) {
             final int value = i + 4;
             columnChoices[i] = findViewById(ids[i]);
+            watch(columnChoices[i], R.string.settings_columns_hint);
             columnChoices[i].setOnClickListener(v -> {
                 if (columns == value) return;
                 columns = value;
@@ -99,6 +101,7 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < rowIds.length; i++) {
             final int value = i;
             rowChoices[i] = findViewById(rowIds[i]);
+            watch(rowChoices[i], R.string.settings_rows_hint);
             rowChoices[i].setOnClickListener(v -> {
                 if (rowsBelowDock == value) return;
                 rowsBelowDock = value;
@@ -111,6 +114,7 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < dockIds.length; i++) {
             final int value = DOCK_OPACITIES[i];
             dockChoices[i] = findViewById(dockIds[i]);
+            watch(dockChoices[i], R.string.settings_dock_hint);
             dockChoices[i].setOnClickListener(v -> {
                 if (dockOpacity == value) return;
                 dockOpacity = value;
@@ -130,11 +134,17 @@ public final class LauncherSettingsActivity extends Activity {
         }
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
         wallpaperChoice.setOnClickListener(v -> showWallpaperMode());
+        watch(wallpaperChoice, R.string.settings_wallpaper_hint);
         fontChoice = findViewById(R.id.fontChoice);
         fontChoice.setOnClickListener(v -> showFontPicker());
+        watch(fontChoice, R.string.settings_font_hint);
+        View yourApps = findViewById(R.id.yourAppsChoice);
+        yourApps.setOnClickListener(v -> startActivity(new Intent(this, AppStudioActivity.class)));
+        watch(yourApps, R.string.your_apps_hint);
         for (int i = 0; i < LOOK_KEYS.length; i++) {
             final String key = LOOK_KEYS[i];
             lookRows[i] = findViewById(LOOK_IDS[i]);
+            watch(lookRows[i], LOOK_HINTS[i]);
             lookRows[i].setOnClickListener(v -> {
                 boolean now = lookOn(Config.load(this), key);
                 choices.edit().putBoolean(key, !now).apply();
@@ -506,6 +516,21 @@ public final class LauncherSettingsActivity extends Activity {
                 || choices.contains(Config.DOCK_OPACITY_KEY)
                 || choices.contains(OpenOnStart.KEY) || choices.contains(HomeFont.KEY)
                 || choices.contains("glass_style") || choices.contains("glow_style") || anyLookChoice();
+    }
+
+    /** The preview tells you what the focused row changes, and settles so the picture stays the subject. */
+    private void watch(View view, int hint) {
+        view.setOnFocusChangeListener((v, focused) -> {
+            if (!focused) return;
+            TextView explain = findViewById(R.id.previewExplain);
+            explain.setText(hint);
+            View card = findViewById(R.id.previewCard);
+            if (Config.load(this).reducedMotion) return;
+            float density = getResources().getDisplayMetrics().density;
+            card.animate().cancel();
+            card.setTranslationY(6f * density);
+            card.animate().translationY(0f).setDuration(Motion.FAST_MS).setInterpolator(Motion.SMOOTH).start();
+        });
     }
 
     private void open(Intent intent) {

@@ -116,8 +116,10 @@
             android:id="@+id/heroName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:maxWidth="480dp"
+            android:ellipsize="end"
             android:textColor="#FFFFFFFF"
-            android:textSize="48sp"
+            android:textSize="34sp"
             android:fontFamily="@string/font_medium"
             android:letterSpacing="0.01"
             android:shadowColor="#F0000000"
@@ -132,11 +134,12 @@
             android:id="@+id/heroMeta"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="4dp"
+            android:maxWidth="480dp"
             android:singleLine="true"
-            android:textColor="#B3FFFFFF"
-            android:textSize="15sp"
+            android:ellipsize="end"
+            android:textColor="#F2F2F7"
+            android:textSize="14sp"
             android:fontFamily="@string/font_light"
             android:visibility="gone" />
 
@@ -187,17 +190,16 @@
                     android:singleLine="true"
                     android:ellipsize="end"
                     android:layout_marginStart="1dp"
-                    android:layout_marginBottom="2dp"
-                    android:textColor="#99EBEBF5"
+                    android:layout_marginBottom="4dp"
+                    android:textColor="#F2F2F7"
                     android:textSize="13sp"
-                    android:fontFamily="@string/font_light"
-                    android:letterSpacing="0.06"
+                    android:fontFamily="@font/sora_regular"
+                    android:letterSpacing="0.02"
                     android:shadowColor="#66000000"
                     android:shadowDx="0"
                     android:shadowDy="1"
                     android:shadowRadius="6"
-                    android:includeFontPadding="false"
-                    android:textAllCaps="true" />
+                    android:includeFontPadding="false" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -212,9 +214,9 @@
                         android:format12Hour="h:mm"
                         android:format24Hour="HH:mm"
                         android:textColor="#FFFFFFFF"
-                        android:textSize="64sp"
-                        android:fontFamily="@string/font_extralight"
-                        android:letterSpacing="-0.04"
+                        android:textSize="40sp"
+                        android:fontFamily="@font/sora_medium"
+                        android:letterSpacing="-0.01"
                         android:shadowColor="#66000000"
                         android:shadowDx="0"
                         android:shadowDy="1"
@@ -227,13 +229,13 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
                         android:layout_gravity="bottom"
-                        android:layout_marginBottom="12dp"
+                        android:layout_marginBottom="8dp"
                         android:format12Hour="a"
                         android:format24Hour=""
-                        android:textColor="#99EBEBF5"
-                        android:textSize="15sp"
-                        android:fontFamily="@string/font_light"
-                        android:letterSpacing="0.04"
+                        android:textColor="#F2F2F7"
+                        android:textSize="11sp"
+                        android:fontFamily="@font/sora_regular"
+                        android:letterSpacing="0.02"
                         android:shadowColor="#66000000"
                         android:shadowDx="0"
                         android:shadowDy="1"
@@ -285,9 +287,9 @@
                             android:ellipsize="end"
                             android:format12Hour="EEEE, MMMM d"
                             android:format24Hour="EEEE, MMMM d"
-                            android:textColor="#C7EBEBF5"
-                            android:textSize="17sp"
-                            android:fontFamily="@string/font_regular"
+                            android:textColor="#E5E5EA"
+                            android:textSize="13sp"
+                            android:fontFamily="@font/sora_regular"
                             android:letterSpacing="0.01"
                             android:shadowColor="#66000000"
                             android:shadowDx="0"
@@ -340,8 +342,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:layout_alignBottom="@id/leftBlock"
-                android:layout_marginBottom="6dp"
+                android:layout_alignTop="@id/leftBlock"
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:orientation="horizontal">
@@ -433,6 +434,15 @@
                 android:descendantFocusability="afterDescendants" />
         </FrameLayout>
     </LinearLayout>
+
+    <!-- Weather sits under the icon row without making the header taller. -->
+    <LinearLayout
+        android:id="@+id/weatherSlot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginEnd="48dp"
+        android:orientation="horizontal" />
 
     <!-- The single floating glass highlight that springs between tiles. -->
     <com.gathin.tvhome.GlassView

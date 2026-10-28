@@ -25,7 +25,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -76,6 +75,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final String name;
         /** Ambient glow colour; 0 until sampled from the banner, or the card's accent from the start. */
         int ambient;
+        /** A colour chosen in Your apps. 0 keeps the usual white name. */
+        int titleColor;
         /** uniform_tiles card fill, top and bottom colour; null until sampled from the icon. */
         int[] backdrop;
 
@@ -97,7 +98,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     static final float FOCUS_SCALE = 1.10f;
     /** Design size of a tile (dp); tiles shrink from here when the columns don't fit, see tileWidthPx. */
-    static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 101f;
+    static final float DESIGN_W_DP = 168f, DESIGN_H_DP = 94f;
 
     /**
      * Tile width for a grid of this inner width: the cell minus room for the focus zoom and the glass
@@ -287,8 +288,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
             boolean own = pkg.equals(ctx.getPackageName());
-            boolean restoreTile = own && ri.activityInfo.name.endsWith(".RestoreActivity");
-            if ((own && !restoreTile) || !ri.activityInfo.exported
+            boolean ownTile = own && (ri.activityInfo.name.endsWith(".RestoreActivity")
+                    || ri.activityInfo.name.endsWith(".SecondScreenActivity"));
+            if ((own && !ownTile) || !ri.activityInfo.exported
                     || !LibraryApps.visible(tvPackages.contains(pkg), hidden.contains(pkg), added.contains(pkg), removed.contains(pkg))) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
             Cards.Card card = cardByPkg.get(pkg);
@@ -297,21 +299,34 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // redraw the tile name as something else (#117).
             String label = card != null ? card.label : Cards.cleanLabel(
                     appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
+            AppLook look = AppLook.get(ctx, pkg);
+            if (card == null && look.name != null) label = Cards.cleanLabel(look.name, pkg);
             if (!seen.add(pkg + '\n' + label)) continue;
             Drawable banner = null;
-            // uniform_tiles draws the icon, so an app's banner is never loaded. A module card keeps its banner.
-            if (!(uniformTiles && card == null)) {
+            Drawable icon;
+            if (ownTile) {
+                boolean restore = ri.activityInfo.name.endsWith(".RestoreActivity");
+                icon = ctx.getDrawable(restore ? R.drawable.ic_restore_app : R.drawable.ic_second_screen);
+            } else if (!(uniformTiles && card == null)) {
                 banner = bundledBanner(appBanners.get(pkg));
                 if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(ri.loadIcon(pm)) : loadBanner(pm, ri);
-            }
-            // The icon is only drawn (and sampled for the glow) when there is no banner, so a tile with a
-            // banner skips loading and decoding it.
-            Drawable icon = banner == null ? ri.loadIcon(pm) : null;
-            if (card != null) {
-                fresh.add(new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent));
+                icon = banner == null ? ri.loadIcon(pm) : null;
             } else {
-                fresh.add(new Entry(label, component, banner, icon));
+                icon = ri.loadIcon(pm);
             }
+            Drawable customIcon = AppLook.icon(ctx, pkg);
+            if (customIcon != null) {
+                banner = customIcon;
+                icon = null;
+            }
+            Entry made = card != null
+                    ? new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent)
+                    : new Entry(label, component, banner, icon);
+            if (look.color != 0) {
+                made.ambient = look.color;
+                made.titleColor = look.color;
+            }
+            fresh.add(made);
         }
         Collections.sort(fresh, (a, b) -> {
             // The owner's own order first; tiles it does not know (new installs) follow by the rule below.
@@ -476,10 +491,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
         h.name.setText(e.name);
+        h.name.setTextColor(e.titleColor != 0 ? e.titleColor : 0xF2FFFFFF);
         // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
         // In a single row every tile is the dock's kind: the big title above names it.
         boolean dockKind = dockRow && (singleRow || position < dockSize);
-        h.name.setVisibility(dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE);
+        boolean nameBelow = !(dockKind && restNameAlpha == 0f);
+        h.name.setVisibility(nameBelow ? View.VISIBLE : View.INVISIBLE);
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
         h.name.setAlpha(focused ? 1f : restNameAlpha);
         h.card.setScaleX(focused && animations ? focusScale() : 1f);
@@ -506,8 +523,17 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.icon.setImageDrawable(e.icon);
             h.icon.setVisibility(View.VISIBLE);
             h.label.setText(e.label);
+            if (e.label != null && e.label.length() > 11) {
+                h.label.setSingleLine(false);
+                h.label.setMaxLines(2);
+                h.label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+            } else {
+                h.label.setSingleLine(true);
+                h.label.setMaxLines(1);
+                h.label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15);
+            }
             h.label.setTypeface(AppMotion.typeface(ctx, e.pkg));
-            h.label.setVisibility(uniformTiles ? View.GONE : View.VISIBLE);
+            h.label.setVisibility(nameBelow || uniformTiles ? View.GONE : View.VISIBLE);
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {
@@ -664,6 +690,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         return position >= 0 && position < items.size() ? items.get(position).pkg : null;
     }
 
+    int titleColorAt(int position) {
+        return position >= 0 && position < items.size() ? items.get(position).titleColor : 0;
+    }
+
     /** The tile's artwork, its banner or else its icon, for the cinematic shelf's backdrop (HeroArt). */
     Drawable artworkAt(int position) {
         if (position < 0 || position >= items.size()) return null;
@@ -672,7 +702,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     float focusScale() {
-        return !animations ? 1f : advancedEffects ? 1.12f : 1.10f;
+        // A small lift reads as selected. 1.12 made the glass rim collide with the row below.
+        return !animations ? 1f : 1.05f;
     }
 
     /** A vivid colour sampled from the app's banner (or icon), cached per entry; a card's accent when it set one. */
@@ -686,7 +717,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     /** Share of the tile height the icon takes in uniform_tiles mode (onCreateViewHolder). */
-    private static final float ICON_SHARE = 0.62f;
+    private static final float ICON_SHARE = 0.54f;
 
     /**
      * The colour covering most of an icon, for a card that should read as that app: a small saturated badge
@@ -934,7 +965,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 view.animate().cancel();
                 banner.animate().cancel();
                 name.animate().cancel();
-                float scale = !animations ? 1f : advancedEffects ? 1.12f : 1.10f;
+                float scale = !animations ? 1f : 1.05f;
                 float s = focused ? scale : 1f;
                 if (!animations) {
                     view.setScaleX(1f);
@@ -964,35 +995,25 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     // Only on focus: snapping it back to -6dp while it fades out would jump it up over the tile.
                     if (focused) name.setTranslationY(density * 4f);
                 } else {
-                    int posNow = getBindingAdapterPosition();
-                    float yaw = 0f;
-                    if (focused && advancedEffects && posNow != RecyclerView.NO_POSITION && arrivedFrom >= 0
-                            && arrivedFrom != posNow) {
-                        int cols = Math.max(1, MainActivity.COLUMNS);
-                        int fromCol = Math.floorMod(arrivedFrom, cols);
-                        int toCol = Math.floorMod(posNow, cols);
-                        if (toCol != fromCol) yaw = (toCol > fromCol ? 1f : -1f) * 12f;
-                    }
-                    if (focused && advancedEffects) {
-                        view.setRotationY(yaw);
-                        view.setRotationX(10f);
-                    }
+                    view.setRotationX(0f);
+                    view.setRotationY(0f);
+                    view.animate().cancel();
                     view.animate().scaleX(s).scaleY(s)
-                            .rotationX(focused && advancedEffects ? -4f : 0f)
+                            .rotationX(0f)
                             .rotationY(0f)
-                            .translationY(focused && advancedEffects ? -8f * density : 0f)
-                            .translationZ(focused && advancedEffects ? 16f * density : 0f)
-                            .setDuration(advancedEffects ? (focused ? 320 : 200) : (focused ? 260 : 180))
-                            .setInterpolator(focused && !overshoot ? new DecelerateInterpolator(1.6f)
-                                    : new OvershootInterpolator(focused ? (advancedEffects ? 0.7f : 1.6f) : 0f))
+                            .translationY(focused ? -Motion.LIFT_DP * density : 0f)
+                            .translationZ(0f)
+                            .setDuration(reducedMotion ? Motion.REDUCED_MS : Motion.FAST_MS)
+                            .setInterpolator(Motion.SMOOTH)
                             .withLayer().start();
-                    if (advancedEffects) {
-                        banner.animate().scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
-                                .setDuration(320).start();
-                    }
+                    banner.animate().cancel();
+                    banner.setScaleX(1f);
+                    banner.setScaleY(1f);
+                    name.animate().cancel();
+                    name.setTranslationY(0f);
                     name.animate().alpha(focused ? 1f : restNameAlpha)
-                            .translationY(focused ? density * 6f : -density * 6f)
-                            .setDuration(240).start();
+                            .setDuration(reducedMotion ? Motion.REDUCED_MS : Motion.FAST_MS)
+                            .setInterpolator(Motion.SMOOTH).start();
                 }
                 int pos = getBindingAdapterPosition();
                 if (focused && pos != RecyclerView.NO_POSITION) {

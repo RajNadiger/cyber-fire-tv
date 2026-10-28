@@ -81,7 +81,9 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         int pos = parent.getChildAdapterPosition(view);
         if (pos >= 0 && (singleRow || pos < dockSize)) {
             outRect.top = (int) (6 * density);
-            outRect.bottom = (int) (12 * density);
+            // Room under the glass rim so the next row is not pressed against the dock.
+            // Called from MainActivity when the dock row is laid out. No schema.
+            outRect.bottom = (int) (40 * density);
         }
     }
 

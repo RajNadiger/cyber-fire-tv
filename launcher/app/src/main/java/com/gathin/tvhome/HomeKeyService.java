@@ -9,6 +9,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
@@ -17,11 +23,17 @@ import android.os.UserManager;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.provider.Settings;
+import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -148,6 +160,8 @@ public class HomeKeyService extends AccessibilityService {
         }
         if (gamepads != null) gamepads.stop();
         if (consumeVolumeKeys) VolumeKeys.stop();
+        if (logcat != null) logcat.destroy();
+        uncover();
         super.onDestroy();
     }
 
@@ -226,6 +240,7 @@ public class HomeKeyService extends AccessibilityService {
             setServiceInfo(info);
         }
         if (!stockHome.isEmpty() || !powerOnLiveTv.isEmpty()) probeAtBoot();
+        if (!stockHomePackage.isEmpty()) watchRemoteHome();
         armStandbyExit();
         holdAppKeys = RemoteKeys.parseHoldAppKeys(config.appKeys);
         holdAppScancodes = RemoteKeys.parseHoldAppScancodes(config.appKeys);
@@ -318,16 +333,22 @@ public class HomeKeyService extends AccessibilityService {
             openHome();
             return;
         }
-        // The Fire TV home button may stay for a few seconds. A later Home press brings Amazon's
-        // screen up again, and that window is the signal to return to Cyber.
-        CharSequence pkg = event.getPackageName();
-        boolean amazon = !stockHomePackage.isEmpty() && pkg != null && stockHomePackage.contentEquals(pkg);
+        // Only the stock home screen. Fire TV settings lives in the same package, and sending every
+        // window from that package back here closed Settings as soon as it opened.
+        CharSequence pkgName = event.getPackageName();
+        if (pkgName != null && getPackageName().contentEquals(pkgName)) {
+            int token = ++coverToken;
+            handler.postDelayed(() -> {
+                if (token == coverToken) uncover();
+            }, 400);
+        }
         CharSequence cls = event.getClassName();
-        boolean amazonHome = cls != null && stockHome.contains(cls.toString());
-        if (amazon || amazonHome) {
+        if (cls != null && stockHome.contains(cls.toString())) {
             if (visitStockHome && SystemClock.elapsedRealtime() < allowStockUntil) return;
             visitStockHome = false;
-            // Already heading back: open again at once. Do not restart the wait.
+            // Cover Amazon before it can draw. Home from any app comes through here.
+            coverToken++;
+            coverScreen();
             if (bringing) openHomeNow();
             else openHome();
         }
@@ -365,13 +386,13 @@ public class HomeKeyService extends AccessibilityService {
         return now < armedUntil;
     }
 
-    /** True while the person opened the stock home on purpose. A short window lets that screen appear. */
+    /** True while the person opened the stock home on purpose. It stays until the remote Home button. */
     private static volatile boolean visitStockHome;
     private static volatile long allowStockUntil;
 
     static void visitStockHome() {
         visitStockHome = true;
-        allowStockUntil = SystemClock.elapsedRealtime() + 3000;
+        allowStockUntil = Long.MAX_VALUE;
     }
 
     static void leaveStockHome() {
@@ -438,21 +459,92 @@ public class HomeKeyService extends AccessibilityService {
 
     private int bringToken;
     private boolean bringing;
+    private Process logcat;
+    private Thread homePressWatch;
+    private long lastRemoteHome;
+    private View cover;
+    private WindowManager windowManager;
+    private int coverToken;
+
+    /** Fire OS handles Home in the system, so this service never sees the key. The press is logged. */
+    private void watchRemoteHome() {
+        if (homePressWatch != null) return;
+        if (checkSelfPermission(android.Manifest.permission.READ_LOGS) != PackageManager.PERMISSION_GRANTED) return;
+        homePressWatch = new Thread(() -> {
+            try {
+                logcat = new ProcessBuilder("/system/bin/logcat", "-b", "main", "-b", "system",
+                        "-T", "1", "-e", "handleShortPressOnHome")
+                        .redirectErrorStream(true).start();
+                BufferedReader in = new BufferedReader(new InputStreamReader(logcat.getInputStream()));
+                String line;
+                while ((line = in.readLine()) != null) {
+                    if (line.contains("handleShortPressOnHome")) handler.post(this::onRemoteHome);
+                }
+            } catch (IOException ignored) {
+            }
+        }, "home-press");
+        homePressWatch.setDaemon(true);
+        homePressWatch.start();
+    }
+
+    /** The real remote's Home button, including when Amazon's home is already the screen in front. */
+    private void onRemoteHome() {
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastRemoteHome < 800) return;
+        lastRemoteHome = now;
+        visitStockHome = false;
+        allowStockUntil = 0;
+        coverScreen();
+        openHome();
+    }
 
     private void openHome() {
-        if (bringing) {
-            openHomeNow();
-            return;
-        }
         bringing = true;
         final int token = ++bringToken;
         openHomeNow();
-        // One chain. A later Amazon window must not start this wait over.
-        for (int delay : new int[]{400, 900, 1600, 2500, 4000}) {
+        // A busy app can make the first open lose to Amazon. Try again at once, not after several seconds.
+        for (int delay : new int[]{60, 140, 280, 500, 900}) {
             handler.postDelayed(() -> {
                 if (token == bringToken) openHomeNow();
             }, delay);
         }
+        handler.postDelayed(() -> {
+            if (token == bringToken) bringing = false;
+        }, 1200);
+    }
+
+    /** Hides Amazon's home the moment it appears, until this launcher's own window is up. */
+    private void coverScreen() {
+        if (cover != null || visitStockHome) return;
+        WindowManager wm = getSystemService(WindowManager.class);
+        if (wm == null) return;
+        View shade = new View(this);
+        shade.setBackgroundColor(0xFF05060C);
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                PixelFormat.OPAQUE);
+        lp.gravity = Gravity.TOP | Gravity.START;
+        try {
+            wm.addView(shade, lp);
+            cover = shade;
+            windowManager = wm;
+        } catch (RuntimeException ignored) {
+        }
+    }
+
+    private void uncover() {
+        if (cover == null || windowManager == null) return;
+        try {
+            windowManager.removeView(cover);
+        } catch (RuntimeException ignored) {
+        }
+        cover = null;
     }
 
     private void openHomeNow() {
@@ -473,10 +565,41 @@ public class HomeKeyService extends AccessibilityService {
             startActivity(open);
         } catch (ActivityNotFoundException | SecurityException ignored) {
         }
-        // Fire OS often ignores startActivity right after Home. The shell start is not in that block.
+        // Fire OS blocks an app from opening for several seconds after Home. A full-screen
+        // alert and an alarm are launched by the system, which is allowed through that hold.
+        launchThroughSystem(open);
         try {
             Runtime.getRuntime().exec(new String[]{"am", "start", "-n", "com.gathin.tvhome/.MainActivity"});
         } catch (java.io.IOException ignored) {
+        }
+    }
+
+    private void launchThroughSystem(Intent open) {
+        PendingIntent openNow = PendingIntent.getActivity(this, 7, open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        NotificationManager notices = getSystemService(NotificationManager.class);
+        if (notices != null) {
+            NotificationChannel channel = new NotificationChannel(
+                    "cyber-home", "Home", NotificationManager.IMPORTANCE_HIGH);
+            channel.setSound(null, null);
+            channel.enableVibration(false);
+            notices.createNotificationChannel(channel);
+            try {
+                notices.notify(7, new Notification.Builder(this, "cyber-home")
+                        .setSmallIcon(R.drawable.ic_home_settings)
+                        .setContentTitle("Cyber")
+                        .setFullScreenIntent(openNow, true)
+                        .setCategory(Notification.CATEGORY_ALARM)
+                        .setPriority(Notification.PRIORITY_MAX)
+                        .setTimeoutAfter(1500)
+                        .build());
+            } catch (RuntimeException ignored) {
+            }
+        }
+        AlarmManager alarms = getSystemService(AlarmManager.class);
+        if (alarms != null) {
+            alarms.setAlarmClock(new AlarmManager.AlarmClockInfo(System.currentTimeMillis(), openNow), openNow);
+            handler.postDelayed(() -> alarms.cancel(openNow), 1500);
         }
     }
 

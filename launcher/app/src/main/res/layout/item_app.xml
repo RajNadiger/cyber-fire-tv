@@ -44,7 +44,7 @@
             android:singleLine="true"
             android:ellipsize="end"
             android:textColor="#FFFFFFFF"
-            android:textSize="13sp"
+            android:textSize="15sp"
             android:fontFamily="@string/font_body"
             android:visibility="gone" />
     </FrameLayout>
@@ -62,7 +62,7 @@
         android:alpha="0"
         android:translationY="-6dp"
         android:textColor="#F2FFFFFF"
-        android:textSize="14sp"
+        android:textSize="16sp"
         android:fontFamily="@string/font_medium"
         android:letterSpacing="0.02" />
 </FrameLayout>
