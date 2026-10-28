@@ -310,7 +310,11 @@ public class HomeKeyService extends AccessibilityService {
     /** Unbound by Android: the user turned the helper off, so Home doesn't put it back (ServiceRepair). */
     @Override
     public boolean onUnbind(Intent intent) {
-        if (repairRecord && !steppingOut) ServiceRepair.disconnected(this, getClass());
+        PowerManager power = getSystemService(PowerManager.class);
+        boolean asleep = power != null && !power.isInteractive();
+        if (repairRecord && !steppingOut && !asleep && stockHomePackage.isEmpty()) {
+            ServiceRepair.disconnected(this, getClass());
+        }
         return super.onUnbind(intent);
     }
 
@@ -481,6 +485,10 @@ public class HomeKeyService extends AccessibilityService {
                     if (line.contains("handleShortPressOnHome")) handler.post(this::onRemoteHome);
                 }
             } catch (IOException ignored) {
+            } finally {
+                // Sleep can kill logcat while this service stays bound. A dead reader must start again.
+                homePressWatch = null;
+                if (running == this) handler.postDelayed(this::watchRemoteHome, 1000);
             }
         }, "home-press");
         homePressWatch.setDaemon(true);

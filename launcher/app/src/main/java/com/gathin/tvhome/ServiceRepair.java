@@ -34,6 +34,20 @@ final class ServiceRepair {
         prefs(context).edit().remove(service.getName()).apply();
     }
 
+    /**
+     * Fire OS drops this helper when the stick sleeps. Callers: MainActivity.onResume,
+     * the screen-on receiver, and GuardKeep.ensureHomeKey. Prefs key is the service class name,
+     * value true. No dates.
+     */
+    static void ensure(Context context) {
+        if (context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
+                != PackageManager.PERMISSION_GRANTED) return;
+        Config config = Config.load(context);
+        if (!config.restoreKeyServices && config.stockHomeRedirect.isEmpty()) return;
+        prefs(context).edit().putBoolean(HomeKeyService.class.getName(), true).commit();
+        restore(context);
+    }
+
     static void restore(Context context) {
         if (context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
                 != PackageManager.PERMISSION_GRANTED) return;

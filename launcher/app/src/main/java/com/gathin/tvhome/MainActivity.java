@@ -400,6 +400,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // restore_key_services: after a force stop, put back the remote's accessibility helpers that Android took
         // off the list (needs WRITE_SECURE_SETTINGS, granted by build-and-install with RESTORE_KEY_SERVICES=1).
         if (cfg.restoreKeyServices) ServiceRepair.restore(this);
+        armWakeRepair();
         settingsRevision = settingsRevision();
         applyViewInputsHandler(cfg.handleViewInputs);
         settingsKeycodes = cfg.settingsKeycodes;
@@ -988,6 +989,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         tileRefresh.onStart();
     }
 
+    /** Screen-on puts the Home helper back after Fire OS drops it in sleep. One receiver for the process. */
+    private static boolean wakeRepairArmed;
+
+    private void armWakeRepair() {
+        if (wakeRepairArmed) return;
+        wakeRepairArmed = true;
+        getApplicationContext().registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                ServiceRepair.ensure(context);
+            }
+        }, new IntentFilter(Intent.ACTION_SCREEN_ON));
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -1005,6 +1020,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         restartIdleClock();
         promptsPaused = false;
+        // Sleep clears the Home helper. Put it back before the next Home press.
+        // Caller of ServiceRepair.ensure. User: pressing home after sleep stays on Fire TV home.
+        ServiceRepair.ensure(this);
         if (grid.getAdapter() == null) grid.setAdapter(adapter);   // dropped by onTrimMemory
         switch (tileRefresh.onResume(packagesChangedSinceRebuild())) {
             case REBUILD:

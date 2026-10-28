@@ -49,6 +49,7 @@ final class GuardKeep {
         // The helper may already be bound. Arming only inside onServiceConnected misses an opt-in
         // that arrives after that, so the first screen-off does nothing (Philips 65PUS8102).
         HomeKeyService.applyStandbyOptIn();
+        ServiceRepair.ensure(context);
         if (!offInStandby(context)) return;
         if (context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
                 != PackageManager.PERMISSION_GRANTED) return;
