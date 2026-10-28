@@ -9,6 +9,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
@@ -341,21 +345,27 @@ public class HomeKeyService extends AccessibilityService {
         // Only the stock home screen. Fire TV settings lives in the same package, and sending every
         // window from that package back here closed Settings as soon as it opened.
         CharSequence pkgName = event.getPackageName();
-        if (pkgName != null && getPackageName().contentEquals(pkgName)) {
+        CharSequence cls = event.getClassName();
+        boolean ourActivity = pkgName != null && cls != null
+                && getPackageName().contentEquals(pkgName)
+                && cls.toString().contains("MainActivity");
+        if (ourActivity) {
             cyberInFront = true;
             int token = ++coverToken;
             handler.post(() -> {
                 if (token == coverToken) uncover();
             });
-        } else if (pkgName != null) {
+        } else if (pkgName != null && (cls == null || !getPackageName().contentEquals(pkgName))) {
             cyberInFront = false;
         }
-        CharSequence cls = event.getClassName();
         if (amazonHomeWindow(pkgName, cls)) {
             if (visitStockHome && SystemClock.elapsedRealtime() < allowStockUntil) return;
             visitStockHome = false;
             cyberInFront = false;
-            openHome();
+            if (!visitStockHome) {
+                coverScreen();
+                openHomeNow();
+            }
         }
     }
 
@@ -465,7 +475,7 @@ public class HomeKeyService extends AccessibilityService {
     private int bringToken;
     private Process logcat;
     private Thread homePressWatch;
-    private long lastRemoteHome;
+    private long lastOpen;
     /** True while this launcher's own window is the one on screen. */
     private boolean cyberInFront;
     private View cover;
@@ -515,28 +525,34 @@ public class HomeKeyService extends AccessibilityService {
 
     /** Every Home press, including a rapid repeat. A second log line for the same press is ignored. */
     private void onRemoteHome() {
-        long now = SystemClock.elapsedRealtime();
-        if (now - lastRemoteHome < 40) return;
-        lastRemoteHome = now;
         visitStockHome = false;
         allowStockUntil = 0;
         openHome();
     }
 
     private void openHome() {
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastOpen < 80) return;
+        lastOpen = now;
         if (visitStockHome) return;
         if (!cyberInFront) coverScreen();
         final int token = ++bringToken;
         openHomeNow();
         handler.postDelayed(() -> {
             if (token == bringToken && !cyberInFront) openHomeNow();
-        }, 120);
+        }, 400);
         handler.postDelayed(() -> {
-            if (token == bringToken && !cyberInFront) uncover();
-        }, 1000);
+            if (token == bringToken && !cyberInFront) openHomeNow();
+        }, 800);
     }
 
-    /** The shade is added once and only shown for the moment between Home and Cyber. */
+    /** Puts the shade above Fire TV. A shade added earlier sits under the home window Fire TV opens later. */
+    private void coverScreen() {
+        if (visitStockHome) return;
+        removeCover();
+        prepareCover();
+        if (cover != null) cover.setVisibility(View.VISIBLE);
+    }
     private void prepareCover() {
         if (cover != null) return;
         WindowManager wm = getSystemService(WindowManager.class);
@@ -560,13 +576,6 @@ public class HomeKeyService extends AccessibilityService {
             windowManager = wm;
         } catch (RuntimeException ignored) {
         }
-    }
-
-    /** Hides Fire TV until Cyber's own window is up. */
-    private void coverScreen() {
-        if (visitStockHome) return;
-        if (cover == null) prepareCover();
-        if (cover != null) cover.setVisibility(View.VISIBLE);
     }
 
     private void uncover() {
@@ -601,10 +610,38 @@ public class HomeKeyService extends AccessibilityService {
             startActivity(open);
         } catch (ActivityNotFoundException | SecurityException ignored) {
         }
-        // Fire OS ignores startActivity after Home and does not throw. The shell start is outside that block.
         try {
-            Runtime.getRuntime().exec(new String[]{"am", "start", "-n", "com.gathin.tvhome/.MainActivity"});
+            Runtime.getRuntime().exec(new String[]{"/system/bin/am", "start", "-n", "com.gathin.tvhome/.MainActivity"});
         } catch (java.io.IOException ignored) {
+        }
+        launchThroughSystem(open);
+    }
+
+    /** The system itself opens Cyber. A start from this app is ignored while Fire TV is handling Home. */
+    private void launchThroughSystem(Intent open) {
+        PendingIntent openNow = PendingIntent.getActivity(this, 7, open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        try {
+            openNow.send();
+        } catch (PendingIntent.CanceledException ignored) {
+        }
+        NotificationManager notices = getSystemService(NotificationManager.class);
+        if (notices == null) return;
+        NotificationChannel channel = new NotificationChannel(
+                "cyber-home", "Home", NotificationManager.IMPORTANCE_HIGH);
+        channel.setSound(null, null);
+        channel.enableVibration(false);
+        notices.createNotificationChannel(channel);
+        try {
+            notices.notify(7, new Notification.Builder(this, "cyber-home")
+                    .setSmallIcon(R.drawable.ic_home_settings)
+                    .setContentTitle("Cyber")
+                    .setFullScreenIntent(openNow, true)
+                    .setCategory(Notification.CATEGORY_ALARM)
+                    .setPriority(Notification.PRIORITY_MAX)
+                    .setTimeoutAfter(800)
+                    .build());
+        } catch (RuntimeException ignored) {
         }
     }
 
