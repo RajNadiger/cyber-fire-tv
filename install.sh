@@ -37,7 +37,7 @@ fi
 "$PY" -I tools/tv.py 'mkdir -p /sdcard/Android/data/com.gathin.tvhome/files/mywallpapers'
 
 echo "4/4  Home button and startup"
-"$PY" -I tools/tv.py 'pm grant com.gathin.tvhome android.permission.WRITE_SECURE_SETTINGS; settings put secure enabled_accessibility_services ""; settings put secure accessibility_enabled 0; settings put secure enabled_accessibility_services com.gathin.tvhome/.HomeKeyService; settings put secure accessibility_enabled 1; am start -n com.gathin.tvhome/.MainActivity'
+"$PY" -I tools/tv.py 'pm grant com.gathin.tvhome android.permission.WRITE_SECURE_SETTINGS; pm grant com.gathin.tvhome android.permission.READ_LOGS; settings put secure enabled_accessibility_services ""; settings put secure accessibility_enabled 0; settings put secure enabled_accessibility_services com.gathin.tvhome/.HomeKeyService; settings put secure accessibility_enabled 1; am start -n com.gathin.tvhome/.MainActivity'
 echo
-echo "Cyber is on the Fire TV. Home opens it. The TV icon at the top right opens Amazon home."
+echo "Cyber is on the Fire TV. Home opens it from any app. The TV icon at the top right opens Amazon home."
 echo "Add pictures to Android/data/com.gathin.tvhome/files/mywallpapers"

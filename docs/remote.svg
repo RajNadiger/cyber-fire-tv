@@ -19,6 +19,6 @@
     <text x="816" y="123" text-anchor="middle" fill="#f6f7f9" font-size="18" font-weight="600">Back</text>
     <text x="720" y="180" fill="#a7adba" font-size="15">Leaves a screen</text>
 
-    <text x="48" y="222" fill="#8e95a3" font-size="15">The TV button opens Amazon. It stays there until you press Home again.</text>
+    <text x="48" y="222" fill="#8e95a3" font-size="15">Home does this from any app. The TV button opens Amazon until you press Home.</text>
   </g>
 </svg>

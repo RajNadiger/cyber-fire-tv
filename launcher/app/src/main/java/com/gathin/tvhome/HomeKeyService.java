@@ -347,10 +347,11 @@ public class HomeKeyService extends AccessibilityService {
             }, 400);
         }
         CharSequence cls = event.getClassName();
-        if (cls != null && stockHome.contains(cls.toString())) {
+        if (amazonHomeWindow(pkgName, cls)) {
             if (visitStockHome && SystemClock.elapsedRealtime() < allowStockUntil) return;
             visitStockHome = false;
-            // Cover Amazon before it can draw. Home from any app comes through here.
+            // The app that was open does not matter. A game, Settings, or Amazon's own
+            // home all land here when the remote's Home button brings that home forward.
             coverToken++;
             coverScreen();
             if (bringing) openHomeNow();
@@ -470,6 +471,26 @@ public class HomeKeyService extends AccessibilityService {
     private WindowManager windowManager;
     private int coverToken;
 
+    /** True for Amazon's home window, whichever app the person was in before they pressed Home. */
+    private boolean amazonHomeWindow(CharSequence pkg, CharSequence cls) {
+        if (cls == null) return false;
+        String name = cls.toString();
+        if (stockHome.contains(name)) return true;
+        if (pkg == null || stockHomePackage.isEmpty() || !stockHomePackage.contentEquals(pkg)) return false;
+        String lower = name.toLowerCase(java.util.Locale.US);
+        if (lower.contains("setting")) return false;
+        return lower.contains("home");
+    }
+
+    /** A system log line for the remote's Home button. The foreground app is not part of the line. */
+    static boolean remoteHomeLine(String line) {
+        if (line == null || line.contains("tvhome")) return false;
+        return line.contains("handleShortPressOnHome")
+                || line.contains("KEYCODE_HOME")
+                || line.contains("keyCode=HOME")
+                || line.contains("keyCode: HOME");
+    }
+
     /** Fire OS handles Home in the system, so this service never sees the key. The press is logged. */
     private void watchRemoteHome() {
         if (homePressWatch != null) return;
@@ -477,12 +498,12 @@ public class HomeKeyService extends AccessibilityService {
         homePressWatch = new Thread(() -> {
             try {
                 logcat = new ProcessBuilder("/system/bin/logcat", "-b", "main", "-b", "system",
-                        "-T", "1", "-e", "handleShortPressOnHome")
+                        "-T", "1", "-e", "handleShortPressOnHome|KEYCODE_HOME|keyCode=HOME|keyCode: HOME")
                         .redirectErrorStream(true).start();
                 BufferedReader in = new BufferedReader(new InputStreamReader(logcat.getInputStream()));
                 String line;
                 while ((line = in.readLine()) != null) {
-                    if (line.contains("handleShortPressOnHome")) handler.post(this::onRemoteHome);
+                    if (remoteHomeLine(line)) handler.post(this::onRemoteHome);
                 }
             } catch (IOException ignored) {
             } finally {
