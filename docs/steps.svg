@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 760" width="960" height="760" role="img" aria-label="Four steps to put Cyber on a Fire TV Stick">
+  <rect width="960" height="760" rx="28" fill="#0c0d14"/>
+  <g font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif">
+    <text x="56" y="64" fill="#f6f7f9" font-size="28" font-weight="600">Four steps</text>
+    <text x="56" y="96" fill="#a7adba" font-size="16">The stick and the computer use the same Wi-Fi.</text>
+
+    <circle cx="84" cy="168" r="18" fill="#1a1c26" stroke="#ff5a6a" stroke-width="1.5"/>
+    <text x="84" y="174" text-anchor="middle" fill="#ff5a6a" font-size="16" font-weight="650">1</text>
+    <text x="124" y="162" fill="#f6f7f9" font-size="22" font-weight="600">On the stick</text>
+    <text x="124" y="192" fill="#c5cad4" font-size="16">Settings   >   My Fire TV   >   Developer options</text>
+    <text x="124" y="218" fill="#c5cad4" font-size="16">Turn on  ADB debugging.    Turn on  Apps from Unknown Sources.</text>
+    <line x1="124" y1="248" x2="904" y2="248" stroke="#ffffff" stroke-opacity="0.08"/>
+
+    <circle cx="84" cy="312" r="18" fill="#1a1c26" stroke="#ff5a6a" stroke-width="1.5"/>
+    <text x="84" y="318" text-anchor="middle" fill="#ff5a6a" font-size="16" font-weight="650">2</text>
+    <text x="124" y="306" fill="#f6f7f9" font-size="22" font-weight="600">Write down the number</text>
+    <text x="124" y="336" fill="#c5cad4" font-size="16">Settings   >   My Fire TV   >   About   >   Network</text>
+    <text x="124" y="362" fill="#c5cad4" font-size="16">Copy the address. It looks like  192.168.1.50</text>
+    <line x1="124" y1="392" x2="904" y2="392" stroke="#ffffff" stroke-opacity="0.08"/>
+
+    <circle cx="84" cy="468" r="18" fill="#1a1c26" stroke="#ff5a6a" stroke-width="1.5"/>
+    <text x="84" y="474" text-anchor="middle" fill="#ff5a6a" font-size="16" font-weight="650">3</text>
+    <text x="124" y="450" fill="#f6f7f9" font-size="22" font-weight="600">On the computer</text>
+    <text x="124" y="480" fill="#c5cad4" font-size="16">One time only: install JDK 17.</text>
+    <text x="124" y="506" fill="#c5cad4" font-size="16">On a Mac, paste   brew install openjdk@17</text>
+    <text x="124" y="532" fill="#c5cad4" font-size="16">Then paste the three lines under this picture. Use your address.</text>
+    <line x1="124" y1="562" x2="904" y2="562" stroke="#ffffff" stroke-opacity="0.08"/>
+
+    <circle cx="84" cy="636" r="18" fill="#1a1c26" stroke="#ff5a6a" stroke-width="1.5"/>
+    <text x="84" y="642" text-anchor="middle" fill="#ff5a6a" font-size="16" font-weight="650">4</text>
+    <text x="124" y="630" fill="#f6f7f9" font-size="22" font-weight="600">Press Home</text>
+    <text x="124" y="660" fill="#c5cad4" font-size="16">Wait until the computer says it is done.</text>
+    <text x="124" y="686" fill="#c5cad4" font-size="16">Press Home on the remote. Cyber is the screen you saw above.</text>
+  </g>
+</svg>

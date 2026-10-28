@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 118" width="960" height="118" role="img" aria-label="What is on the screen">
+  <rect width="960" height="118" rx="28" fill="#0c0d14"/>
+  <g font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif">
+    <text x="48" y="52" fill="#f6f7f9" font-size="18" font-weight="600">Time</text>
+    <text x="48" y="78" fill="#a7adba" font-size="14">Left side</text>
+    <text x="250" y="52" fill="#f6f7f9" font-size="18" font-weight="600">The name</text>
+    <text x="250" y="78" fill="#a7adba" font-size="14">Stays in one place</text>
+    <text x="490" y="52" fill="#f6f7f9" font-size="18" font-weight="600">Your apps</text>
+    <text x="490" y="78" fill="#a7adba" font-size="14">Pictures only</text>
+    <text x="730" y="52" fill="#f6f7f9" font-size="18" font-weight="600">Home</text>
+    <text x="730" y="78" fill="#a7adba" font-size="14">Opens this screen</text>
+  </g>
+</svg>
