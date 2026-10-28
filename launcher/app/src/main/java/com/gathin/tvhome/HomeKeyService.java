@@ -459,6 +459,7 @@ public class HomeKeyService extends AccessibilityService {
         return upTime - downTime < longPressTimeout;
     }
 
+    private int bringToken;
     private Process logcat;
     private Thread homePressWatch;
     private long lastRemoteHome;
@@ -521,7 +522,12 @@ public class HomeKeyService extends AccessibilityService {
 
     private void openHome() {
         if (!cyberInFront) coverScreen();
+        final int token = ++bringToken;
         openHomeNow();
+        // Fire TV often ignores the first open. One more, almost at once, if Cyber is not up yet.
+        handler.postDelayed(() -> {
+            if (token == bringToken && !cyberInFront) openHomeNow();
+        }, 80);
     }
 
     /** Hides Amazon's home the moment it appears, until this launcher's own window is up. */
@@ -576,11 +582,11 @@ public class HomeKeyService extends AccessibilityService {
         try {
             startActivity(open);
         } catch (ActivityNotFoundException | SecurityException ignored) {
-            try {
-                Runtime.getRuntime().exec(new String[]{
-                        "am", "start", "-n", "com.gathin.tvhome/.MainActivity", "--activity-no-animation"});
-            } catch (java.io.IOException ignoredToo) {
-            }
+        }
+        // Fire OS ignores startActivity after Home and does not throw. The shell start is outside that block.
+        try {
+            Runtime.getRuntime().exec(new String[]{"am", "start", "-n", "com.gathin.tvhome/.MainActivity"});
+        } catch (java.io.IOException ignored) {
         }
         final int covered = coverToken;
         handler.postDelayed(() -> {
